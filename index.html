@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Опалубка">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%232563eb'/%3E%3Cg fill='none' stroke='white' stroke-width='4'%3E%3Crect x='12' y='16' width='40' height='14'/%3E%3Crect x='12' y='34' width='40' height='14'/%3E%3C/g%3E%3C/svg%3E">
+<title>Учёт аренды опалубки</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --panel:#ffffff; --ink:#15181d; --muted:#6b7280; --line:#e3e6ea;
+    --brand:#2563eb; --brand-ink:#ffffff; --brand-soft:#eaf0fe;
+    --ok:#15803d; --ok-soft:#e6f4ea;
+    --warn:#b45309; --warn-soft:#fdf3e3;
+    --bad:#b91c1c; --bad-soft:#fdecec;
+    --radius:10px;
+    --shadow:0 1px 2px rgba(16,24,40,.06), 0 8px 24px rgba(16,24,40,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;}
+  .wrap{max-width:1280px;margin:0 auto;padding:18px 16px 64px}
+
+  /* ---------- шапка ---------- */
+  header.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+  .logo{font-size:18px;font-weight:700;letter-spacing:-.2px;margin-right:auto}
+  .logo small{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+  .tabs{display:flex;gap:4px;background:var(--panel);padding:4px;border-radius:var(--radius);
+        border:1px solid var(--line)}
+  .tabs button{border:0;background:transparent;padding:8px 14px;border-radius:7px;cursor:pointer;
+               font:inherit;font-weight:600;color:var(--muted)}
+  .tabs button.active{background:var(--brand);color:var(--brand-ink)}
+
+  /* ---------- кнопки ---------- */
+  .btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:8px 13px;
+       border-radius:8px;cursor:pointer;font:inherit;font-weight:600;white-space:nowrap}
+  .btn:hover{border-color:#c9cfd6}
+  .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+  .btn.primary:hover{background:#1d4fd7}
+  .btn.ghost{background:transparent;border-color:transparent;color:var(--muted);padding:6px 8px}
+  .btn.ghost:hover{background:#eef0f3;color:var(--ink)}
+  .btn.danger{color:var(--bad)}
+  .btn.sm{padding:5px 9px;font-size:12.5px}
+
+  /* ---------- карточки / KPI ---------- */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:16px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px}
+  .kpi .l{font-size:12px;color:var(--muted);margin-bottom:4px}
+  .kpi .v{font-size:21px;font-weight:700;letter-spacing:-.3px}
+  .kpi .v.bad{color:var(--bad)} .kpi .v.ok{color:var(--ok)} .kpi .v.warn{color:var(--warn)}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+         box-shadow:var(--shadow);overflow:hidden}
+  .panel .head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 14px;
+               border-bottom:1px solid var(--line)}
+  .panel .head h2{margin:0;font-size:15px;margin-right:auto}
+
+  /* ---------- фильтры ---------- */
+  .filters{display:flex;gap:8px;flex-wrap:wrap;padding:12px 14px;background:#fafbfc;
+           border-bottom:1px solid var(--line)}
+  .filters .f{display:flex;flex-direction:column;gap:3px}
+  .filters label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+  input,select,textarea{font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:8px;
+                        background:#fff;color:var(--ink);min-width:0}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
+  .chk{display:flex;align-items:center;gap:6px;font-size:13px;align-self:end;padding-bottom:7px}
+  .chk input{padding:0}
+
+  /* ---------- таблицы ---------- */
+  .tw{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);
+     padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap;background:#fafbfc}
+  td{padding:10px 12px;border-bottom:1px solid #f0f2f4;vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:#fbfcfd}
+  .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .nowrap{white-space:nowrap}
+  .sub{color:var(--muted);font-size:12px}
+  .strong{font-weight:600}
+  .empty{padding:40px 16px;text-align:center;color:var(--muted)}
+
+  .badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:600;white-space:nowrap}
+  .b-ok{background:var(--ok-soft);color:var(--ok)}
+  .b-warn{background:var(--warn-soft);color:var(--warn)}
+  .b-bad{background:var(--bad-soft);color:var(--bad)}
+  .b-mut{background:#eef0f3;color:var(--muted)}
+  .b-brand{background:var(--brand-soft);color:var(--brand)}
+
+  .lines{margin:0;padding:0;list-style:none}
+  .lines li{white-space:nowrap}
+
+  /* ---------- модалка ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(16,24,40,.45);display:none;
+           align-items:flex-start;justify-content:center;padding:24px 14px;overflow:auto;z-index:50}
+  .overlay.open{display:flex}
+  .modal{background:var(--panel);border-radius:14px;width:100%;max-width:760px;box-shadow:0 24px 60px rgba(0,0,0,.25)}
+  .modal h3{margin:0;font-size:16px}
+  .modal .mhead{display:flex;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line)}
+  .modal .mbody{padding:16px 18px}
+  .modal .mfoot{display:flex;gap:8px;justify-content:flex-end;padding:14px 18px;border-top:1px solid var(--line);
+                background:#fafbfc;border-radius:0 0 14px 14px;flex-wrap:wrap}
+  .grid{display:grid;gap:12px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:1fr 1fr 1fr}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field label{font-size:12px;font-weight:600;color:var(--muted)}
+  .field .hint{font-size:11.5px;color:var(--muted)}
+  .sec{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+  .sec h4{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
+
+  .line-row{display:grid;grid-template-columns:1fr 96px 110px 34px;gap:8px;align-items:center;margin-bottom:8px}
+  .line-row .amt{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}
+  .x{border:0;background:#eef0f3;color:var(--muted);border-radius:8px;height:34px;cursor:pointer;font-size:16px;line-height:1}
+  .x:hover{background:var(--bad-soft);color:var(--bad)}
+
+  .totals{background:var(--brand-soft);border-radius:var(--radius);padding:12px 14px;margin-top:12px}
+  .totals .row{display:flex;justify-content:space-between;padding:3px 0;font-size:13.5px}
+  .totals .row.big{font-size:16px;font-weight:700;border-top:1px solid #d3e0fb;margin-top:6px;padding-top:8px}
+  .err{background:var(--bad-soft);color:var(--bad);border-radius:8px;padding:9px 12px;margin-top:12px;
+       font-size:13px;display:none}
+  .err.show{display:block}
+
+  /* ---------- меню «Ещё» ---------- */
+  .menu{position:relative}
+  .menu > summary{list-style:none;cursor:pointer;user-select:none}
+  .menu > summary::-webkit-details-marker{display:none}
+  .menu-pop{position:absolute;right:0;top:calc(100% + 6px);background:var(--panel);z-index:40;
+            border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:6px;
+            display:flex;flex-direction:column;min-width:210px}
+  .menu-pop .btn{width:100%;text-align:left;border-color:transparent;background:transparent}
+  .menu-pop .btn:hover{background:#eef0f3}
+
+  /* ---------- видимость по ширине ---------- */
+  .only-sm{display:none}
+  .fab{display:none}
+
+  /* ===================== МОБИЛЬНАЯ ВЕРСТКА ===================== */
+  @media (max-width:760px){
+    html{-webkit-text-size-adjust:100%}
+    body{font-size:15px}
+    .wrap{padding:0 0 calc(92px + env(safe-area-inset-bottom))}
+    .only-sm{display:block}
+    .hide-sm{display:none !important}
+
+    /* поля: 16px, чтобы iOS не зумил при фокусе; крупные тач-цели */
+    input,select,textarea{font-size:16px;padding:10px 11px;border-radius:9px}
+    .btn{min-height:42px;padding:9px 14px;touch-action:manipulation}
+    .btn.sm{min-height:38px;padding:8px 12px;font-size:14px}
+    .btn.ghost{padding:9px 12px}
+    button,select,a{touch-action:manipulation}
+
+    /* шапка липнет к верху */
+    header.top{position:sticky;top:0;z-index:30;margin:0;gap:8px;padding:10px 12px;
+               background:var(--bg);border-bottom:1px solid var(--line);
+               padding-top:calc(10px + env(safe-area-inset-top))}
+    .logo{font-size:16px;width:auto}
+    .logo small{display:none}
+    .tabs{order:3;width:100%;padding:3px}
+    .tabs button{flex:1;padding:10px 8px;font-size:14px}
+
+    .kpis{grid-template-columns:1fr 1fr;gap:8px;padding:12px 12px 0;margin-bottom:12px}
+    .kpi{padding:10px 12px;border-radius:9px}
+    .kpi .l{font-size:11px}
+    .kpi .v{font-size:18px}
+
+    .panel{border-radius:0;border-left:0;border-right:0;box-shadow:none}
+    .panel .head{padding:12px}
+    .panel .head h2{font-size:16px}
+    .panel .head .btn.primary{display:none}        /* вместо неё — круглая кнопка внизу */
+
+    /* фильтры сворачиваются, поиск всегда на виду */
+    .filters{padding:10px 12px;gap:8px}
+    .filters .f{width:100%}
+    .filters:not(.open) > .f:not(.f-always),
+    .filters:not(.open) > .chk,
+    .filters:not(.open) > .btn{display:none}
+    .filters.open .f.half{width:calc(50% - 4px)}
+
+    /* ---------- таблицы превращаются в карточки ---------- */
+    .tw{overflow:visible}
+    table,tbody,tr,td{display:block}
+    thead{display:none}
+    tbody tr{display:grid;gap:10px 12px;margin:10px 12px 0;padding:12px;background:#fff;
+             border:1px solid var(--line);border-radius:12px;box-shadow:0 1px 2px rgba(16,24,40,.05)}
+    tbody tr:last-child{margin-bottom:12px}
+    tbody tr:hover{background:#fff}
+    #rentBody tr{grid-template-columns:1fr 1fr}
+    #catBody tr{grid-template-columns:1fr 1fr 1fr}
+    td{border:0;padding:0;font-size:14px}
+    td:empty{display:none}
+    td.num{text-align:left}
+    td.c-main,td.c-block,td.c-wide,td.c-act{grid-column:1/-1}
+    td[data-label]::before{content:attr(data-label);display:block;font-size:10.5px;font-weight:700;
+                           text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin-bottom:3px}
+    td.c-main{font-size:16px}
+    td.c-act{display:flex;gap:8px;padding-top:10px;border-top:1px solid var(--line)}
+    td.c-act .btn{flex:1;text-align:center}
+    td.c-act .btn.ghost{border-color:var(--line);background:#fff;color:var(--ink)}
+    .lines li{white-space:normal}
+
+    /* ---------- модалка = нижний лист ---------- */
+    .overlay{padding:0;align-items:flex-end}
+    .modal{max-width:none;border-radius:16px 16px 0 0;max-height:94vh;display:flex;flex-direction:column}
+    .modal .mhead{position:sticky;top:0;background:var(--panel);border-radius:16px 16px 0 0;z-index:2;padding:14px}
+    .modal .mbody{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px;flex:1}
+    .modal .mfoot{position:sticky;bottom:0;padding:12px 14px calc(12px + env(safe-area-inset-bottom));
+                  border-radius:0;flex-wrap:nowrap}
+    .modal .mfoot .btn{flex:1}
+    .modal .mfoot .btn.danger{flex:0 0 auto}
+    .g2,.g3{grid-template-columns:1fr}
+    .line-row{grid-template-columns:1fr 78px 42px;gap:8px;padding:10px;margin-bottom:10px;
+              background:#fafbfc;border:1px solid var(--line);border-radius:10px}
+    .line-row .amt{grid-column:1/-1;text-align:left;order:3;font-size:14px}
+    .line-row .x{order:2;height:42px;font-size:20px}
+    .totals .row{font-size:14.5px}
+    .totals .row.big{font-size:17px}
+
+    /* круглая кнопка действия */
+    .fab{display:flex;position:fixed;right:16px;z-index:35;align-items:center;justify-content:center;
+         bottom:calc(18px + env(safe-area-inset-bottom));width:58px;height:58px;border-radius:50%;
+         border:0;background:var(--brand);color:#fff;font-size:30px;line-height:1;cursor:pointer;
+         box-shadow:0 6px 20px rgba(37,99,235,.45);touch-action:manipulation}
+    .fab:active{transform:scale(.94)}
+  }
+
+  /* ---------- плашки (обновление, бэкап, установка) ---------- */
+  .note{display:none;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;
+        padding:10px 14px;border-radius:var(--radius);font-size:13.5px;border:1px solid}
+  .note.show{display:flex}
+  .note.warn{background:var(--warn-soft);border-color:#f0dcb8;color:#7c4a08}
+  .note.info{background:var(--brand-soft);border-color:#cddffb;color:#1b3f8f}
+  .note .btn{margin-left:auto;min-height:34px;padding:6px 12px}
+  @media (max-width:760px){
+    .note{margin:12px 12px 0;border-radius:9px}
+    .note .btn{margin-left:auto}
+  }
+
+  @media (max-width:380px){
+    #catBody tr{grid-template-columns:1fr 1fr}
+    .kpi .v{font-size:17px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="logo">Учёт аренды опалубки<small>склад, сделки и расчёт стоимости</small></div>
+    <nav class="tabs">
+      <button id="tab-rent" class="active" onclick="switchTab('rent')">Аренды</button>
+      <button id="tab-cat" onclick="switchTab('cat')">Каталог и склад</button>
+    </nav>
+    <details class="menu" id="topMenu">
+      <summary class="btn">Ещё ▾</summary>
+      <div class="menu-pop">
+        <button class="btn" onclick="menuDo(exportData)">⬇ Экспорт в файл</button>
+        <button class="btn" onclick="menuDo(()=>document.getElementById('importFile').click())">⬆ Импорт из файла</button>
+        <button class="btn" onclick="menuDo(seedDemo)">Заполнить примером</button>
+      </div>
+    </details>
+    <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importData(this)">
+  </header>
+
+  <div class="note info" id="noteUpdate">
+    <span>Вышла новая версия приложения.</span>
+    <button class="btn" onclick="location.reload()">Обновить</button>
+  </div>
+  <div class="note info" id="noteInstall">
+    <span>Добавьте приложение на главный экран — откроется без адресной строки.</span>
+    <button class="btn" onclick="doInstall()">Установить</button>
+  </div>
+  <div class="note warn" id="noteBackup">
+    <span id="noteBackupText"></span>
+    <button class="btn" onclick="exportData()">Сохранить копию</button>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <!-- ============ АРЕНДЫ ============ -->
+  <section id="view-rent">
+    <div class="panel">
+      <div class="head">
+        <h2>Сделки</h2>
+        <span class="sub" id="rentCount"></span>
+        <button class="btn sm only-sm" onclick="toggleFilters('fR')">Фильтры ▾</button>
+        <button class="btn primary" onclick="openRental()">+ Сдать в аренду</button>
+      </div>
+      <div class="filters" id="fR">
+        <div class="f f-always" style="flex:1 1 200px">
+          <label>Поиск</label>
+          <input id="fR_q" type="search" placeholder="имя, телефон, позиция…" oninput="render()">
+        </div>
+        <div class="f half">
+          <label>Статус</label>
+          <select id="fR_st" onchange="render()">
+            <option value="open">Активные</option>
+            <option value="all">Все</option>
+            <option value="overdue">Просроченные</option>
+            <option value="soon">Истекают ≤ 3 дн.</option>
+            <option value="debt">С долгом</option>
+            <option value="closed">Закрытые</option>
+          </select>
+        </div>
+        <div class="f half">
+          <label>Взяли с</label>
+          <input type="date" id="fR_from" onchange="render()">
+        </div>
+        <div class="f half">
+          <label>Взяли по</label>
+          <input type="date" id="fR_to" onchange="render()">
+        </div>
+        <div class="f half">
+          <label>Сортировка</label>
+          <select id="fR_sort" onchange="render()">
+            <option value="left">Осталось дней ↑</option>
+            <option value="new">Сначала новые</option>
+            <option value="sum">Сумма ↓</option>
+            <option value="name">Имя А–Я</option>
+          </select>
+        </div>
+        <button class="btn ghost" style="align-self:end;margin-bottom:1px" onclick="resetRentFilters()">Сбросить</button>
+      </div>
+      <div class="tw">
+        <table>
+          <thead><tr>
+            <th>Клиент</th><th>Позиции</th><th>Взяли</th><th>Вернуть</th><th>Осталось</th>
+            <th class="num">Сумма</th><th class="num">Оплачено / долг</th><th class="num">Залог</th><th></th>
+          </tr></thead>
+          <tbody id="rentBody"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="rentEmpty" style="display:none">Сделок не найдено.</div>
+    </div>
+  </section>
+
+  <!-- ============ КАТАЛОГ ============ -->
+  <section id="view-cat" style="display:none">
+    <div class="panel">
+      <div class="head">
+        <h2>Каталог опалубки</h2>
+        <span class="sub" id="catCount"></span>
+        <button class="btn sm only-sm" onclick="toggleFilters('fC')">Фильтры ▾</button>
+        <button class="btn primary" onclick="openItem()">+ Добавить опалубку</button>
+      </div>
+      <div class="filters" id="fC">
+        <div class="f f-always" style="flex:1 1 200px">
+          <label>Поиск</label>
+          <input id="fC_q" type="search" placeholder="название или размер, напр. 2х1" oninput="render()">
+        </div>
+        <div class="f half">
+          <label>Сортировка</label>
+          <select id="fC_sort" onchange="render()">
+            <option value="name">Название А–Я</option>
+            <option value="free">Свободно ↓</option>
+            <option value="price">Цена ↓</option>
+            <option value="area">Площадь ↓</option>
+          </select>
+        </div>
+        <label class="chk"><input type="checkbox" id="fC_free" onchange="render()"> только со свободными</label>
+      </div>
+      <div class="tw">
+        <table>
+          <thead><tr>
+            <th>Название</th><th>Размер</th><th class="num">Площадь</th><th class="num">Цена, с./день</th>
+            <th class="num">Всего</th><th class="num">В аренде</th><th class="num">Свободно</th><th>Примечание</th><th></th>
+          </tr></thead>
+          <tbody id="catBody"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="catEmpty" style="display:none">
+        Каталог пуст. <button class="btn sm" onclick="seedDemo()">Заполнить примером</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<button class="fab" id="fab" onclick="fabAction()" aria-label="Добавить">+</button>
+
+<!-- ============ МОДАЛКА: ПОЗИЦИЯ КАТАЛОГА ============ -->
+<div class="overlay" id="ovItem">
+  <div class="modal" style="max-width:560px">
+    <div class="mhead"><h3 id="itemTitle">Новая опалубка</h3>
+      <button class="btn ghost" style="margin-left:auto" onclick="closeModal('ovItem')">✕</button></div>
+    <div class="mbody">
+      <div class="grid">
+        <div class="field">
+          <label>Название</label>
+          <input id="i_name" placeholder="Щит стеновой" autocomplete="off">
+        </div>
+        <div class="grid g3">
+          <div class="field"><label>Ширина, м</label><input type="number" inputmode="decimal" id="i_w" step="0.05" min="0" placeholder="2" oninput="itemPreview()"></div>
+          <div class="field"><label>Высота, м</label><input type="number" inputmode="decimal" id="i_h" step="0.05" min="0" placeholder="1" oninput="itemPreview()"></div>
+          <div class="field"><label>Количество, шт</label><input type="number" inputmode="numeric" id="i_qty" min="0" step="1" placeholder="40"></div>
+        </div>
+        <div class="field">
+          <label>Цена за штуку в день, с.</label>
+          <input type="number" inputmode="decimal" id="i_price" min="0" step="0.5" placeholder="5">
+          <span class="hint" id="i_prev"></span>
+        </div>
+        <div class="field"><label>Примечание</label><input id="i_note" placeholder="необязательно"></div>
+      </div>
+      <div class="err" id="i_err"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn danger" id="i_del" style="margin-right:auto" onclick="deleteItem()">Удалить</button>
+      <button class="btn" onclick="closeModal('ovItem')">Отмена</button>
+      <button class="btn primary" onclick="saveItem()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ МОДАЛКА: АРЕНДА ============ -->
+<div class="overlay" id="ovRent">
+  <div class="modal">
+    <div class="mhead"><h3 id="rentTitle">Сдать в аренду</h3>
+      <button class="btn ghost" style="margin-left:auto" onclick="closeModal('ovRent')">✕</button></div>
+    <div class="mbody">
+      <div class="grid g2">
+        <div class="field"><label>Имя клиента</label><input id="r_name" placeholder="Иванов Иван" autocomplete="name"></div>
+        <div class="field"><label>Телефон</label><input type="tel" inputmode="tel" id="r_phone" placeholder="+992 …" autocomplete="tel"></div>
+      </div>
+      <div class="grid g3" style="margin-top:12px">
+        <div class="field"><label>Дата выдачи</label><input type="date" id="r_start" onchange="rentCalc()"></div>
+        <div class="field"><label>Срок, дней</label><input type="number" inputmode="numeric" id="r_days" min="1" step="1" value="7" oninput="rentCalc()"></div>
+        <div class="field"><label>Дата возврата</label><input id="r_end" disabled></div>
+      </div>
+
+      <div class="sec">
+        <h4>Позиции</h4>
+        <div id="r_lines"></div>
+        <button class="btn sm" onclick="addLine()">+ Добавить позицию</button>
+      </div>
+
+      <div class="sec">
+        <h4>Деньги</h4>
+        <div class="grid g3">
+          <div class="field"><label>Залог, с.</label><input type="number" inputmode="decimal" id="r_dep" min="0" step="1" value="0" oninput="rentCalc()"></div>
+          <div class="field">
+            <label>Оплачено, с.</label>
+            <input type="number" inputmode="decimal" id="r_paid" min="0" step="1" value="0" oninput="rentCalc()">
+          </div>
+          <div class="field" style="justify-content:end">
+            <button class="btn sm" onclick="payFull()">Оплачено полностью</button>
+          </div>
+        </div>
+        <div class="field" style="margin-top:12px"><label>Комментарий</label><input id="r_note" placeholder="необязательно"></div>
+      </div>
+
+      <div class="totals" id="r_tot"></div>
+      <div class="err" id="r_err"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn danger" id="r_del" style="margin-right:auto" onclick="deleteRental()">Удалить</button>
+      <button class="btn" onclick="closeModal('ovRent')">Отмена</button>
+      <button class="btn primary" onclick="saveRental()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===================== хранилище ===================== */
+const KEY = 'opalubka.v1';
+let state = { items: [], rentals: [] };
+let tab = 'rent';
+
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(raw){ const p = JSON.parse(raw); state.items = p.items||[]; state.rentals = p.rentals||[]; }
+  }catch(e){ console.warn('Не удалось прочитать данные', e); }
+}
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(state)); }
+  catch(e){ alert('Не удалось сохранить данные: '+e.message); }
+  if(typeof checkBackup === 'function') checkBackup();
+}
+const uid = () => Math.random().toString(36).slice(2,10);
+
+/* ===================== утилиты ===================== */
+const nf0 = new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0});
+const nf2 = new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2});
+const money = n => nf0.format(Math.round(n||0)) + ' с.';
+const num = v => { const n = parseFloat(String(v).replace(',','.')); return isFinite(n) ? n : 0; };
+
+const isMobile = () => window.matchMedia('(max-width:760px)').matches;
+
+function todayISO(){ const d=new Date(); return iso(d); }
+function iso(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function parseD(s){ if(!s) return null; const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
+function addDays(s,n){ const d=parseD(s); if(!d) return s; d.setDate(d.getDate()+n); return iso(d); }
+function diffDays(a,b){ const x=parseD(a), y=parseD(b); if(!x||!y) return 0; return Math.round((y-x)/86400000); }
+function fmtD(s){ const d=parseD(s); return d ? d.toLocaleDateString('ru-RU') : '—'; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function plural(n,a,b,c){ n=Math.abs(n)%100; const n1=n%10;
+  if(n>10&&n<20) return c; if(n1>1&&n1<5) return b; if(n1===1) return a; return c; }
+
+const itemById = id => state.items.find(i=>i.id===id);
+const itemLabel = it => it ? `${it.name} ${nf2.format(it.w)}×${nf2.format(it.h)} м` : 'удалённая позиция';
+
+/* сколько штук позиции сейчас на руках (по открытым сделкам) */
+function rentedQty(itemId, exceptRentalId){
+  let q = 0;
+  for(const r of state.rentals){
+    if(r.status !== 'open') continue;
+    if(exceptRentalId && r.id === exceptRentalId) continue;
+    for(const l of r.lines) if(l.itemId === itemId) q += l.qty;
+  }
+  return q;
+}
+const freeQty = (itemId, exceptRentalId) => {
+  const it = itemById(itemId); if(!it) return 0;
+  return it.qty - rentedQty(itemId, exceptRentalId);
+};
+
+const rentalTotal = r => r.lines.reduce((s,l)=> s + l.qty * l.price * r.days, 0);
+const rentalDebt  = r => Math.max(0, rentalTotal(r) - (r.paid||0));
+
+/* статус сделки: closed | overdue | soon | open */
+function rentalState(r){
+  if(r.status === 'closed') return 'closed';
+  const left = diffDays(todayISO(), addDays(r.start, r.days));
+  if(left < 0) return 'overdue';
+  if(left <= 3) return 'soon';
+  return 'open';
+}
+function daysLeft(r){ return diffDays(todayISO(), addDays(r.start, r.days)); }
+
+/* ===================== навигация ===================== */
+function switchTab(t){
+  tab = t;
+  document.getElementById('view-rent').style.display = t==='rent' ? '' : 'none';
+  document.getElementById('view-cat').style.display  = t==='cat'  ? '' : 'none';
+  document.getElementById('tab-rent').classList.toggle('active', t==='rent');
+  document.getElementById('tab-cat').classList.toggle('active', t==='cat');
+}
+function fabAction(){ tab==='cat' ? openItem() : openRental(); }
+
+function toggleFilters(id){
+  const box = document.getElementById(id);
+  box.classList.toggle('open');
+  const btn = box.parentElement.querySelector('.head .only-sm');
+  if(btn) btn.textContent = box.classList.contains('open') ? 'Фильтры ▴' : 'Фильтры ▾';
+}
+
+function menuDo(fn){ document.getElementById('topMenu').open = false; fn(); }
+document.addEventListener('click', e=>{
+  const m = document.getElementById('topMenu');
+  if(m && m.open && !m.contains(e.target)) m.open = false;
+});
+
+/* блокируем прокрутку фона, пока открыт нижний лист */
+function lockScroll(on){ document.body.style.overflow = on ? 'hidden' : ''; }
+
+function closeModal(id){
+  document.getElementById(id).classList.remove('open');
+  if(!document.querySelector('.overlay.open')) lockScroll(false);
+}
+document.addEventListener('keydown', e=>{
+  if(e.key === 'Escape'){
+    document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open'));
+    lockScroll(false);
+  }
+});
+document.querySelectorAll('.overlay').forEach(o=>{
+  o.addEventListener('mousedown', e=>{ if(e.target === o){ o.classList.remove('open'); lockScroll(false); } });
+});
+
+/* ===================== KPI ===================== */
+function renderKpis(){
+  const open = state.rentals.filter(r=>r.status==='open');
+  const overdue = open.filter(r=>daysLeft(r)<0);
+  const totalPieces = state.items.reduce((s,i)=>s+i.qty,0);
+  const outPieces = state.items.reduce((s,i)=>s+rentedQty(i.id),0);
+  const expected = open.reduce((s,r)=>s+rentalTotal(r),0);
+  const debt = state.rentals.reduce((s,r)=>s+rentalDebt(r),0);
+  document.getElementById('kpis').innerHTML = `
+    <div class="kpi"><div class="l">Активных аренд</div><div class="v">${open.length}</div></div>
+    <div class="kpi"><div class="l">Просрочено</div><div class="v ${overdue.length?'bad':''}">${overdue.length}</div></div>
+    <div class="kpi"><div class="l">Щитов на руках</div><div class="v">${nf0.format(outPieces)} <span class="sub">/ ${nf0.format(totalPieces)}</span></div></div>
+    <div class="kpi"><div class="l">Свободно на складе</div><div class="v ok">${nf0.format(totalPieces-outPieces)}</div></div>
+    <div class="kpi"><div class="l">Сумма активных аренд</div><div class="v">${money(expected)}</div></div>
+    <div class="kpi"><div class="l">Долг клиентов</div><div class="v ${debt?'warn':''}">${money(debt)}</div></div>`;
+}
+
+/* ===================== таблица аренд ===================== */
+function renderRentals(){
+  const q = document.getElementById('fR_q').value.trim().toLowerCase();
+  const st = document.getElementById('fR_st').value;
+  const from = document.getElementById('fR_from').value;
+  const to = document.getElementById('fR_to').value;
+  const sort = document.getElementById('fR_sort').value;
+
+  let rows = state.rentals.slice();
+
+  rows = rows.filter(r=>{
+    const s = rentalState(r);
+    if(st==='open' && r.status!=='open') return false;
+    if(st==='closed' && r.status!=='closed') return false;
+    if(st==='overdue' && s!=='overdue') return false;
+    if(st==='soon' && s!=='soon') return false;
+    if(st==='debt' && rentalDebt(r)<=0) return false;
+    if(from && r.start < from) return false;
+    if(to && r.start > to) return false;
+    if(q){
+      const hay = [r.client, r.phone, r.note||'',
+        ...r.lines.map(l=>itemLabel(itemById(l.itemId)))].join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  rows.sort((a,b)=>{
+    if(sort==='left'){
+      if(a.status!==b.status) return a.status==='open' ? -1 : 1;
+      return daysLeft(a)-daysLeft(b);
+    }
+    if(sort==='new') return (b.createdAt||'').localeCompare(a.createdAt||'');
+    if(sort==='sum') return rentalTotal(b)-rentalTotal(a);
+    return a.client.localeCompare(b.client,'ru');
+  });
+
+  document.getElementById('rentCount').textContent =
+    `${rows.length} ${plural(rows.length,'сделка','сделки','сделок')}`;
+  document.getElementById('rentEmpty').style.display = rows.length ? 'none' : '';
+
+  document.getElementById('rentBody').innerHTML = rows.map(r=>{
+    const s = rentalState(r), left = daysLeft(r), total = rentalTotal(r), debt = rentalDebt(r);
+    let leftCell;
+    if(s==='closed')      leftCell = `<span class="badge b-mut">закрыта ${r.closedAt?fmtD(r.closedAt):''}</span>`;
+    else if(s==='overdue')leftCell = `<span class="badge b-bad">просрочка ${-left} ${plural(-left,'день','дня','дней')}</span>`;
+    else if(s==='soon')   leftCell = `<span class="badge b-warn">${left} ${plural(left,'день','дня','дней')}</span>`;
+    else                  leftCell = `<span class="badge b-ok">${left} ${plural(left,'день','дня','дней')}</span>`;
+
+    const lines = r.lines.map(l=>{
+      const it = itemById(l.itemId);
+      return `<li>${esc(itemLabel(it))} — <b>${l.qty}</b> шт · ${nf2.format(l.price)} с./дн</li>`;
+    }).join('');
+
+    const phone = (r.phone||'').trim();
+    const tel = phone ? `<a href="tel:${esc(phone.replace(/[^\d+]/g,''))}" class="sub" style="color:var(--brand)">${esc(phone)}</a>` : '<span class="sub">—</span>';
+
+    return `<tr>
+      <td class="c-main"><div class="strong">${esc(r.client)}</div>
+          <div>${tel}</div>
+          ${r.note?`<div class="sub">${esc(r.note)}</div>`:''}</td>
+      <td class="c-block" data-label="Позиции"><ul class="lines sub">${lines}</ul></td>
+      <td class="nowrap" data-label="Взяли">${fmtD(r.start)}<div class="sub">${r.days} ${plural(r.days,'день','дня','дней')}</div></td>
+      <td class="nowrap" data-label="Вернуть">${fmtD(addDays(r.start,r.days))}</td>
+      <td data-label="Осталось">${leftCell}</td>
+      <td class="num strong" data-label="Сумма">${money(total)}</td>
+      <td class="num" data-label="Оплачено">${money(r.paid||0)}
+          ${debt>0?`<div class="sub" style="color:var(--bad)">долг ${money(debt)}</div>`
+                  :`<div class="sub" style="color:var(--ok)">оплачено</div>`}</td>
+      <td class="num" data-label="Залог">${r.deposit?money(r.deposit):'—'}</td>
+      <td class="nowrap c-act">
+        ${r.status==='open'?`<button class="btn sm" onclick="closeRental('${r.id}')">Возврат</button> `:''}
+        <button class="btn sm ghost" onclick="openRental('${r.id}')">Изменить</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+/* ===================== таблица каталога ===================== */
+function renderCatalog(){
+  const q = document.getElementById('fC_q').value.trim().toLowerCase().replace(/[х*]/g,'x');
+  const onlyFree = document.getElementById('fC_free').checked;
+  const sort = document.getElementById('fC_sort').value;
+
+  let rows = state.items.map(i=>({
+    it:i, rented:rentedQty(i.id), free:i.qty-rentedQty(i.id), area:i.w*i.h
+  }));
+
+  rows = rows.filter(r=>{
+    if(onlyFree && r.free<=0) return false;
+    if(q){
+      const hay = `${r.it.name} ${r.it.note||''} ${nf2.format(r.it.w)}x${nf2.format(r.it.h)}`
+                    .toLowerCase().replace(/[х*]/g,'x').replace(/\s/g,'');
+      if(!hay.includes(q.replace(/\s/g,''))) return false;
+    }
+    return true;
+  });
+
+  rows.sort((a,b)=>{
+    if(sort==='free') return b.free-a.free;
+    if(sort==='price') return b.it.price-a.it.price;
+    if(sort==='area') return b.area-a.area;
+    return a.it.name.localeCompare(b.it.name,'ru');
+  });
+
+  document.getElementById('catCount').textContent =
+    `${rows.length} ${plural(rows.length,'позиция','позиции','позиций')}`;
+  document.getElementById('catEmpty').style.display = rows.length ? 'none' : '';
+
+  document.getElementById('catBody').innerHTML = rows.map(({it,rented,free,area})=>`
+    <tr>
+      <td class="c-main"><div class="strong">${esc(it.name)}</div>
+        <div class="sub only-sm">${nf2.format(it.w)} × ${nf2.format(it.h)} м · ${nf2.format(area)} м² · <b>${nf2.format(it.price)} с./день</b></div></td>
+      <td class="nowrap hide-sm">${nf2.format(it.w)} × ${nf2.format(it.h)} м</td>
+      <td class="num hide-sm">${nf2.format(area)} м²</td>
+      <td class="num hide-sm">${nf2.format(it.price)}</td>
+      <td class="num" data-label="Всего">${it.qty}</td>
+      <td class="num" data-label="В аренде">${rented}</td>
+      <td class="num" data-label="Свободно"><span class="badge ${free>0?'b-ok':'b-mut'}">${free}</span></td>
+      <td class="sub c-wide"${it.note?' data-label="Примечание"':''}>${esc(it.note||'')}</td>
+      <td class="nowrap c-act"><button class="btn sm ghost" onclick="openItem('${it.id}')">Изменить</button></td>
+    </tr>`).join('');
+}
+
+function render(){ renderKpis(); renderRentals(); renderCatalog(); }
+
+function resetRentFilters(){
+  ['fR_q','fR_from','fR_to'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fR_st').value='open';
+  document.getElementById('fR_sort').value='left';
+  render();
+}
+
+/* ===================== форма каталога ===================== */
+let editItemId = null;
+
+function openItem(id){
+  editItemId = id || null;
+  const it = id ? itemById(id) : null;
+  document.getElementById('itemTitle').textContent = it ? 'Редактирование позиции' : 'Новая опалубка';
+  document.getElementById('i_name').value  = it ? it.name : '';
+  document.getElementById('i_w').value     = it ? it.w : '';
+  document.getElementById('i_h').value     = it ? it.h : '';
+  document.getElementById('i_qty').value   = it ? it.qty : '';
+  document.getElementById('i_price').value = it ? it.price : '';
+  document.getElementById('i_note').value  = it ? (it.note||'') : '';
+  document.getElementById('i_del').style.display = it ? '' : 'none';
+  document.getElementById('i_err').classList.remove('show');
+  itemPreview();
+  document.getElementById('ovItem').classList.add('open');
+  lockScroll(true);
+  if(!isMobile()) document.getElementById('i_name').focus();
+}
+
+function itemPreview(){
+  const w = num(document.getElementById('i_w').value), h = num(document.getElementById('i_h').value);
+  document.getElementById('i_prev').textContent = (w&&h) ? `Площадь одного щита: ${nf2.format(w*h)} м²` : '';
+}
+
+function itemErr(msg){
+  const e = document.getElementById('i_err');
+  e.textContent = msg; e.classList.add('show');
+}
+
+function saveItem(){
+  const name = document.getElementById('i_name').value.trim();
+  const w = num(document.getElementById('i_w').value), h = num(document.getElementById('i_h').value);
+  const qty = Math.round(num(document.getElementById('i_qty').value));
+  const price = num(document.getElementById('i_price').value);
+  const note = document.getElementById('i_note').value.trim();
+
+  if(!name) return itemErr('Укажите название.');
+  if(w<=0 || h<=0) return itemErr('Ширина и высота должны быть больше нуля.');
+  if(qty<0) return itemErr('Количество не может быть отрицательным.');
+  if(price<0) return itemErr('Цена не может быть отрицательной.');
+
+  if(editItemId){
+    const out = rentedQty(editItemId);
+    if(qty < out) return itemErr(`Сейчас в аренде ${out} шт — количество не может быть меньше.`);
+    Object.assign(itemById(editItemId), {name,w,h,qty,price,note});
+  }else{
+    state.items.push({id:uid(),name,w,h,qty,price,note});
+  }
+  save(); render(); closeModal('ovItem');
+}
+
+function deleteItem(){
+  if(!editItemId) return;
+  const out = rentedQty(editItemId);
+  if(out > 0) return itemErr(`Нельзя удалить: ${out} шт сейчас в аренде.`);
+  const used = state.rentals.some(r=>r.lines.some(l=>l.itemId===editItemId));
+  const it = itemById(editItemId);
+  const warn = used ? '\n\nПозиция встречается в закрытых сделках — там она останется как «удалённая позиция».' : '';
+  if(!confirm(`Удалить «${it.name}» из каталога?${warn}`)) return;
+  state.items = state.items.filter(i=>i.id!==editItemId);
+  save(); render(); closeModal('ovItem');
+}
+
+/* ===================== форма аренды ===================== */
+let editRentId = null;
+let draftLines = [];   // [{itemId, qty, price}]
+
+function openRental(id){
+  editRentId = id || null;
+  const r = id ? state.rentals.find(x=>x.id===id) : null;
+  document.getElementById('rentTitle').textContent = r ? 'Редактирование сделки' : 'Сдать в аренду';
+  document.getElementById('r_name').value  = r ? r.client : '';
+  document.getElementById('r_phone').value = r ? (r.phone||'') : '';
+  document.getElementById('r_start').value = r ? r.start : todayISO();
+  document.getElementById('r_days').value  = r ? r.days : 7;
+  document.getElementById('r_dep').value   = r ? (r.deposit||0) : 0;
+  document.getElementById('r_paid').value  = r ? (r.paid||0) : 0;
+  document.getElementById('r_note').value  = r ? (r.note||'') : '';
+  document.getElementById('r_del').style.display = r ? '' : 'none';
+  document.getElementById('r_err').classList.remove('show');
+
+  draftLines = r ? r.lines.map(l=>({...l})) : [];
+  if(!draftLines.length) draftLines.push({itemId:'', qty:1, price:0});
+  renderLines();
+  document.getElementById('ovRent').classList.add('open');
+  lockScroll(true);
+  if(!isMobile()) document.getElementById('r_name').focus();
+}
+
+function renderLines(){
+  const box = document.getElementById('r_lines');
+  box.innerHTML = draftLines.map((l,idx)=>{
+    const opts = ['<option value="">— выберите позицию —</option>'].concat(
+      state.items.map(it=>{
+        const free = freeQty(it.id, editRentId);
+        const sel = it.id===l.itemId ? ' selected' : '';
+        return `<option value="${it.id}"${sel}>${esc(itemLabel(it))} · свободно ${free} · ${nf2.format(it.price)} с./дн</option>`;
+      })).join('');
+    const it = itemById(l.itemId);
+    const free = it ? freeQty(it.id, editRentId) : 0;
+    const days = Math.max(1, Math.round(num(document.getElementById('r_days').value)));
+    const amt = it ? l.qty * it.price * days : 0;
+    return `<div class="line-row">
+      <select onchange="setLineItem(${idx}, this.value)">${opts}</select>
+      <input type="number" inputmode="numeric" min="1" step="1" value="${l.qty}"
+             oninput="setLineQty(${idx}, this.value)" title="${it?`свободно ${free} шт`:''}">
+      <div class="amt" id="amt${idx}">${it?money(amt):'—'}</div>
+      <button class="x" onclick="removeLine(${idx})" title="убрать">×</button>
+    </div>`;
+  }).join('');
+  rentCalc();
+}
+
+/* обновляем сумму строки точечно — иначе на телефоне поле теряет фокус при вводе */
+function updateLineAmt(i){
+  const el = document.getElementById('amt'+i);
+  if(!el) return;
+  const l = draftLines[i], it = itemById(l.itemId);
+  const days = Math.max(1, Math.round(num(document.getElementById('r_days').value)));
+  el.textContent = it ? money(l.qty * it.price * days) : '—';
+}
+
+function setLineItem(i, id){
+  draftLines[i].itemId = id;
+  const it = itemById(id);
+  draftLines[i].price = it ? it.price : 0;
+  renderLines();
+}
+function setLineQty(i, v){ draftLines[i].qty = Math.max(1, Math.round(num(v))); updateLineAmt(i); rentCalc(); }
+function addLine(){ draftLines.push({itemId:'', qty:1, price:0}); renderLines(); }
+function removeLine(i){ draftLines.splice(i,1); if(!draftLines.length) draftLines.push({itemId:'',qty:1,price:0}); renderLines(); }
+
+function rentCalc(){
+  const start = document.getElementById('r_start').value || todayISO();
+  const days = Math.max(1, Math.round(num(document.getElementById('r_days').value)));
+  document.getElementById('r_end').value = fmtD(addDays(start, days));
+
+  let total = 0, pieces = 0;
+  draftLines.forEach((l,i)=>{
+    updateLineAmt(i);
+    const it = itemById(l.itemId);
+    if(!it) return;
+    total += l.qty * it.price * days;
+    pieces += l.qty;
+  });
+  const dep = num(document.getElementById('r_dep').value);
+  const paid = num(document.getElementById('r_paid').value);
+  const debt = Math.max(0, total - paid);
+
+  document.getElementById('r_tot').innerHTML = `
+    <div class="row"><span>Щитов в сделке</span><span>${pieces} шт</span></div>
+    <div class="row"><span>Срок</span><span>${days} ${plural(days,'день','дня','дней')} · до ${fmtD(addDays(start,days))}</span></div>
+    <div class="row"><span>Залог (возвратный)</span><span>${money(dep)}</span></div>
+    <div class="row"><span>Оплачено</span><span>${money(paid)}</span></div>
+    <div class="row big"><span>${debt>0?'Остаток к оплате':'К оплате'}</span><span>${debt>0?money(debt):money(total)}</span></div>`;
+  window._rentTotal = total;
+}
+
+function payFull(){
+  rentCalc();
+  document.getElementById('r_paid').value = Math.round(window._rentTotal||0);
+  rentCalc();
+}
+
+function rentErr(msg){
+  const e = document.getElementById('r_err');
+  e.textContent = msg; e.classList.add('show');
+}
+
+function saveRental(){
+  const client = document.getElementById('r_name').value.trim();
+  const phone = document.getElementById('r_phone').value.trim();
+  const start = document.getElementById('r_start').value;
+  const days = Math.round(num(document.getElementById('r_days').value));
+  const deposit = num(document.getElementById('r_dep').value);
+  const paid = num(document.getElementById('r_paid').value);
+  const note = document.getElementById('r_note').value.trim();
+
+  if(!client) return rentErr('Укажите имя клиента.');
+  if(!start) return rentErr('Укажите дату выдачи.');
+  if(days < 1) return rentErr('Срок должен быть не меньше одного дня.');
+
+  const lines = draftLines.filter(l=>l.itemId && l.qty>0);
+  if(!lines.length) return rentErr('Добавьте хотя бы одну позицию.');
+
+  // суммируем дубли одной позиции и проверяем остатки
+  const merged = new Map();
+  for(const l of lines){
+    const cur = merged.get(l.itemId) || {itemId:l.itemId, qty:0, price:0};
+    cur.qty += l.qty;
+    merged.set(l.itemId, cur);
+  }
+  const existing = editRentId ? state.rentals.find(r=>r.id===editRentId) : null;
+  for(const l of merged.values()){
+    const it = itemById(l.itemId);
+    // при редактировании закрытой сделки остатки не трогаем
+    const free = (existing && existing.status==='closed') ? it.qty : freeQty(l.itemId, editRentId);
+    if(l.qty > free) return rentErr(`«${itemLabel(it)}»: свободно ${free} шт, запрошено ${l.qty}.`);
+    // цену фиксируем на момент сделки (для новых строк — текущую из каталога)
+    const old = existing ? existing.lines.find(x=>x.itemId===l.itemId) : null;
+    l.price = old ? old.price : it.price;
+  }
+  const finalLines = [...merged.values()];
+
+  if(existing){
+    Object.assign(existing, {client, phone, start, days, deposit, paid, note, lines:finalLines});
+  }else{
+    state.rentals.push({
+      id:uid(), client, phone, start, days, deposit, paid, note,
+      lines:finalLines, status:'open', closedAt:null, createdAt:new Date().toISOString()
+    });
+  }
+  save(); render(); closeModal('ovRent');
+}
+
+function deleteRental(){
+  if(!editRentId) return;
+  if(!confirm('Удалить сделку? Щиты вернутся на склад.')) return;
+  state.rentals = state.rentals.filter(r=>r.id!==editRentId);
+  save(); render(); closeModal('ovRent');
+}
+
+function closeRental(id){
+  const r = state.rentals.find(x=>x.id===id);
+  if(!r) return;
+  const debt = rentalDebt(r);
+  const pieces = r.lines.reduce((s,l)=>s+l.qty,0);
+  let msg = `Принять возврат ${pieces} шт от «${r.client}»?`;
+  if(debt>0) msg += `\n\nВнимание: остаток долга ${money(debt)}.`;
+  if(r.deposit>0) msg += `\nВернуть залог: ${money(r.deposit)}.`;
+  if(!confirm(msg)) return;
+  r.status = 'closed';
+  r.closedAt = todayISO();
+  save(); render();
+}
+
+/* ===================== экспорт / импорт ===================== */
+function exportData(){
+  const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `опалубка-${todayISO()}.json`;
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+  try{ localStorage.setItem(KEY+'.lastExport', todayISO()); }catch(e){}
+  checkBackup();
+}
+
+/* Данные лежат только в этом браузере — напоминаем сохранять копию */
+function checkBackup(){
+  const n = document.getElementById('noteBackup');
+  if(!state.items.length && !state.rentals.length){ n.classList.remove('show'); return; }
+  let last = null;
+  try{ last = localStorage.getItem(KEY+'.lastExport'); }catch(e){}
+  const days = last ? diffDays(last, todayISO()) : 999;
+  if(days < 14){ n.classList.remove('show'); return; }
+  document.getElementById('noteBackupText').textContent = last
+    ? `Резервная копия не делалась ${days} ${plural(days,'день','дня','дней')}. Данные хранятся только на этом устройстве.`
+    : 'Сделайте резервную копию: данные хранятся только на этом устройстве и пропадут при очистке браузера.';
+  n.classList.add('show');
+}
+
+function importData(input){
+  const f = input.files[0];
+  if(!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try{
+      const p = JSON.parse(rd.result);
+      if(!Array.isArray(p.items) || !Array.isArray(p.rentals)) throw new Error('неверная структура файла');
+      if(!confirm('Импорт заменит все текущие данные. Продолжить?')) return;
+      state = {items:p.items, rentals:p.rentals};
+      save(); render();
+    }catch(e){ alert('Не удалось прочитать файл: '+e.message); }
+    input.value = '';
+  };
+  rd.readAsText(f);
+}
+
+/* ===================== демо-данные ===================== */
+function seedDemo(){
+  if(state.items.length || state.rentals.length){
+    if(!confirm('Демо-данные заменят всё, что уже введено. Продолжить?')) return;
+  }
+  state.items = [
+    {id:uid(), name:'Щит стеновой', w:2, h:1,   qty:40, price:5,  note:'ламинированная фанера'},
+    {id:uid(), name:'Щит стеновой', w:1.5, h:1, qty:30, price:4,  note:''},
+    {id:uid(), name:'Щит стеновой', w:1, h:1,   qty:50, price:3,  note:''},
+    {id:uid(), name:'Угловой элемент', w:0.3, h:1, qty:20, price:2.5, note:'внутренний угол'},
+    {id:uid(), name:'Щит перекрытия', w:3, h:1, qty:15, price:8,  note:''}
+  ];
+  const a = state.items[0], b = state.items[2];
+  state.rentals = [
+    {id:uid(), client:'Рахимов Ф.', phone:'+992 900 11-22-33', start:addDays(todayISO(),-5), days:14,
+     deposit:500, paid:1000, note:'объект на Айни', lines:[{itemId:a.id,qty:12,price:a.price},{itemId:b.id,qty:8,price:b.price}],
+     status:'open', closedAt:null, createdAt:new Date().toISOString()},
+    {id:uid(), client:'ООО «Строй-Сити»', phone:'+992 918 44-55-66', start:addDays(todayISO(),-20), days:15,
+     deposit:1500, paid:0, note:'', lines:[{itemId:a.id,qty:10,price:a.price}],
+     status:'open', closedAt:null, createdAt:new Date().toISOString()}
+  ];
+  save(); render();
+}
+
+/* ===================== PWA: офлайн и установка ===================== */
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(e=>console.warn('SW:', e));
+  });
+  navigator.serviceWorker.addEventListener('message', e=>{
+    if(e.data && e.data.type === 'update-ready')
+      document.getElementById('noteUpdate').classList.add('show');
+  });
+}
+
+let installPrompt = null;
+window.addEventListener('beforeinstallprompt', e=>{
+  e.preventDefault();
+  installPrompt = e;
+  let hidden = null;
+  try{ hidden = localStorage.getItem(KEY+'.noInstall'); }catch(err){}
+  if(!hidden) document.getElementById('noteInstall').classList.add('show');
+});
+async function doInstall(){
+  document.getElementById('noteInstall').classList.remove('show');
+  try{ localStorage.setItem(KEY+'.noInstall','1'); }catch(e){}
+  if(installPrompt){ installPrompt.prompt(); installPrompt = null; }
+}
+window.addEventListener('appinstalled', ()=>{
+  document.getElementById('noteInstall').classList.remove('show');
+  try{ localStorage.setItem(KEY+'.noInstall','1'); }catch(e){}
+});
+
+/* ===================== старт ===================== */
+load();
+document.getElementById('r_start').value = todayISO();
+render();
+checkBackup();
+</script>
+</body>
+</html>
