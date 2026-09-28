@@ -127,6 +127,25 @@
        font-size:13px;display:none}
   .err.show{display:block}
 
+  /* ---------- возвраты ---------- */
+  .rets{display:flex;flex-wrap:wrap;gap:2px 10px;margin-top:6px;font-size:12px;color:var(--brand)}
+  .ret-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;
+           padding:10px 0;border-bottom:1px solid var(--line)}
+  .ret-row:last-child{border-bottom:0}
+  .ret-row .nm{font-weight:600}
+  .stepper{display:flex;align-items:center}
+  .stepper button{width:36px;height:36px;border:1px solid var(--line);background:#fff;cursor:pointer;
+                  font-size:18px;line-height:1;color:var(--ink);touch-action:manipulation}
+  .stepper button:first-child{border-radius:8px 0 0 8px}
+  .stepper button:last-child{border-radius:0 8px 8px 0}
+  .stepper input{width:58px;height:36px;text-align:center;border-radius:0;border-left:0;border-right:0}
+  .ret-log{list-style:none;margin:0;padding:0}
+  .ret-log li{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .ret-log li:last-child{border-bottom:0}
+  .ret-log .d{font-weight:600;white-space:nowrap}
+  .ret-log .w{flex:1;color:var(--muted);font-size:13px}
+  .ret-log .x{width:34px;flex:0 0 auto}
+
   /* ---------- меню «Ещё» ---------- */
   .menu{position:relative}
   .menu > summary{list-style:none;cursor:pointer;user-select:none}
@@ -219,6 +238,8 @@
               background:#fafbfc;border:1px solid var(--line);border-radius:10px}
     .line-row .amt{grid-column:1/-1;text-align:left;order:3;font-size:14px}
     .line-row .x{order:2;height:42px;font-size:20px}
+    .stepper button{width:44px;height:44px}
+    .stepper input{height:44px;width:60px}
     .totals .row{font-size:14.5px}
     .totals .row.big{font-size:17px}
 
@@ -262,7 +283,7 @@
       <div class="menu-pop">
         <button class="btn" onclick="menuDo(exportData)">⬇ Экспорт в файл</button>
         <button class="btn" onclick="menuDo(()=>document.getElementById('importFile').click())">⬆ Импорт из файла</button>
-        <button class="btn" onclick="menuDo(seedDemo)">Заполнить примером</button>
+        <button class="btn" onclick="menuDo(loadDefaultCatalog)">Загрузить базовый каталог</button>
       </div>
     </details>
     <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importData(this)">
@@ -304,7 +325,9 @@
             <option value="all">Все</option>
             <option value="overdue">Просроченные</option>
             <option value="soon">Истекают ≤ 3 дн.</option>
+            <option value="partial">Вернули частично</option>
             <option value="debt">С долгом</option>
+            <option value="overpay">С переплатой</option>
             <option value="closed">Закрытые</option>
           </select>
         </div>
@@ -344,10 +367,10 @@
   <section id="view-cat" style="display:none">
     <div class="panel">
       <div class="head">
-        <h2>Каталог опалубки</h2>
+        <h2>Каталог</h2>
         <span class="sub" id="catCount"></span>
         <button class="btn sm only-sm" onclick="toggleFilters('fC')">Фильтры ▾</button>
-        <button class="btn primary" onclick="openItem()">+ Добавить опалубку</button>
+        <button class="btn primary" onclick="openItem()">+ Добавить позицию</button>
       </div>
       <div class="filters" id="fC">
         <div class="f f-always" style="flex:1 1 200px">
@@ -357,6 +380,7 @@
         <div class="f half">
           <label>Сортировка</label>
           <select id="fC_sort" onchange="render()">
+            <option value="order">По порядку</option>
             <option value="name">Название А–Я</option>
             <option value="free">Свободно ↓</option>
             <option value="price">Цена ↓</option>
@@ -375,7 +399,7 @@
         </table>
       </div>
       <div class="empty" id="catEmpty" style="display:none">
-        Каталог пуст. <button class="btn sm" onclick="seedDemo()">Заполнить примером</button>
+        Каталог пуст. <button class="btn sm" onclick="loadDefaultCatalog()">Загрузить базовый каталог</button>
       </div>
     </div>
   </section>
@@ -386,21 +410,26 @@
 <!-- ============ МОДАЛКА: ПОЗИЦИЯ КАТАЛОГА ============ -->
 <div class="overlay" id="ovItem">
   <div class="modal" style="max-width:560px">
-    <div class="mhead"><h3 id="itemTitle">Новая опалубка</h3>
+    <div class="mhead"><h3 id="itemTitle">Новая позиция</h3>
       <button class="btn ghost" style="margin-left:auto" onclick="closeModal('ovItem')">✕</button></div>
     <div class="mbody">
       <div class="grid">
         <div class="field">
           <label>Название</label>
-          <input id="i_name" placeholder="Щит стеновой" autocomplete="off">
+          <input id="i_name" placeholder="Щит" autocomplete="off">
         </div>
-        <div class="grid g3">
-          <div class="field"><label>Ширина, м</label><input type="number" inputmode="decimal" id="i_w" step="0.05" min="0" placeholder="2" oninput="itemPreview()"></div>
-          <div class="field"><label>Высота, м</label><input type="number" inputmode="decimal" id="i_h" step="0.05" min="0" placeholder="1" oninput="itemPreview()"></div>
-          <div class="field"><label>Количество, шт</label><input type="number" inputmode="numeric" id="i_qty" min="0" step="1" placeholder="40"></div>
+        <div class="grid g2">
+          <div class="field"><label>Ширина, м</label><input type="number" inputmode="decimal" id="i_w" step="0.05" min="0" placeholder="0,5" oninput="itemPreview()"></div>
+          <div class="field"><label>Высота / длина, м</label><input type="number" inputmode="decimal" id="i_h" step="0.05" min="0" placeholder="2" oninput="itemPreview()"></div>
+        </div>
+        <span class="hint" style="font-size:11.5px;color:var(--muted);margin-top:-6px">Размер необязателен: у дамкрата укажите только длину, у лесов или мешалки оставьте пустым.</span>
+        <div class="grid g2">
+          <div class="field"><label>Количество</label><input type="number" inputmode="numeric" id="i_qty" min="0" step="1" placeholder="40"></div>
+          <div class="field"><label>Единица</label>
+            <select id="i_unit"><option value="шт">шт</option><option value="компл.">комплект</option></select></div>
         </div>
         <div class="field">
-          <label>Цена за штуку в день, с.</label>
+          <label>Цена за единицу в день, с.</label>
           <input type="number" inputmode="decimal" id="i_price" min="0" step="0.5" placeholder="5">
           <span class="hint" id="i_prev"></span>
         </div>
@@ -453,6 +482,12 @@
         <div class="field" style="margin-top:12px"><label>Комментарий</label><input id="r_note" placeholder="необязательно"></div>
       </div>
 
+      <div class="sec" id="r_retsec" style="display:none">
+        <h4>Возвраты</h4>
+        <ul class="ret-log" id="r_rets"></ul>
+        <div class="field"><span class="hint">Ошибочный возврат можно удалить — всё снова будет числиться на руках у клиента.</span></div>
+      </div>
+
       <div class="totals" id="r_tot"></div>
       <div class="err" id="r_err"></div>
     </div>
@@ -460,6 +495,38 @@
       <button class="btn danger" id="r_del" style="margin-right:auto" onclick="deleteRental()">Удалить</button>
       <button class="btn" onclick="closeModal('ovRent')">Отмена</button>
       <button class="btn primary" onclick="saveRental()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ МОДАЛКА: ВОЗВРАТ ============ -->
+<div class="overlay" id="ovReturn">
+  <div class="modal" style="max-width:600px">
+    <div class="mhead"><h3 id="retTitle">Возврат</h3>
+      <button class="btn ghost" style="margin-left:auto" onclick="closeModal('ovReturn')">✕</button></div>
+    <div class="mbody">
+      <div class="grid g2">
+        <div class="field">
+          <label>Дата возврата</label>
+          <input type="date" id="ret_date" onchange="retCalc()">
+        </div>
+        <div class="field" style="justify-content:end">
+          <div style="display:flex;gap:8px">
+            <button class="btn sm" style="flex:1" onclick="retFill(true)">Всё</button>
+            <button class="btn sm" style="flex:1" onclick="retFill(false)">Ничего</button>
+          </div>
+        </div>
+      </div>
+      <div class="sec" style="margin-top:14px">
+        <h4>Сколько привезли</h4>
+        <div id="ret_rows"></div>
+      </div>
+      <div class="totals" id="ret_tot"></div>
+      <div class="err" id="ret_err"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="closeModal('ovReturn')">Отмена</button>
+      <button class="btn primary" id="ret_ok" onclick="saveReturn()">Принять возврат</button>
     </div>
   </div>
 </div>
@@ -475,6 +542,19 @@ function load(){
     const raw = localStorage.getItem(KEY);
     if(raw){ const p = JSON.parse(raw); state.items = p.items||[]; state.rentals = p.rentals||[]; }
   }catch(e){ console.warn('Не удалось прочитать данные', e); }
+  migrate();
+}
+
+/* Сделки, закрытые до появления частичных возвратов, превращаем в один полный возврат */
+function migrate(){
+  for(const r of state.rentals){
+    if(!Array.isArray(r.returns)) r.returns = [];
+    if(r.status === 'closed' && !r.returns.length){
+      r.returns.push({id:uid(), date:r.closedAt || addDays(r.start, r.days),
+                      items:r.lines.map(l=>({itemId:l.itemId, qty:l.qty}))});
+    }
+    syncStatus(r);
+  }
 }
 function save(){
   try{ localStorage.setItem(KEY, JSON.stringify(state)); }
@@ -502,15 +582,42 @@ function plural(n,a,b,c){ n=Math.abs(n)%100; const n1=n%10;
   if(n>10&&n<20) return c; if(n1>1&&n1<5) return b; if(n1===1) return a; return c; }
 
 const itemById = id => state.items.find(i=>i.id===id);
-const itemLabel = it => it ? `${it.name} ${nf2.format(it.w)}×${nf2.format(it.h)} м` : 'удалённая позиция';
+/* размер необязателен: «0,3 × 1 м», одна длина «3,4 м» или ничего (леса, мешалка) */
+function sizeStr(it, sep=' × '){
+  const w = +it.w || 0, h = +it.h || 0;
+  if(w && h) return `${nf2.format(w)}${sep}${nf2.format(h)} м`;
+  if(w || h) return `${nf2.format(w || h)} м`;
+  return '';
+}
+const itemArea = it => (+it.w || 0) * (+it.h || 0);
+const unitOf = it => (it && it.unit) || 'шт';
+const itemLabel = it => it ? [it.name, sizeStr(it,'×')].filter(Boolean).join(' ') : 'удалённая позиция';
 
-/* сколько штук позиции сейчас на руках (по открытым сделкам) */
+/* ---------- возвраты ----------
+   r.returns = [{id, date, items:[{itemId, qty}]}] — журнал возвратов сделки.
+   Сделка закрыта, когда вернули всё; дата закрытия — дата последнего возврата. */
+const returnsOf = r => r.returns || (r.returns = []);
+function returnedQty(r, itemId){
+  let q = 0;
+  for(const ret of returnsOf(r)) for(const x of ret.items) if(x.itemId === itemId) q += x.qty;
+  return q;
+}
+const outQty = (r, l) => Math.max(0, l.qty - returnedQty(r, l.itemId));   // на руках по строке
+const outTotal = r => r.lines.reduce((s,l)=> s + outQty(r,l), 0);
+const pcsTotal = r => r.lines.reduce((s,l)=> s + l.qty, 0);
+
+function syncStatus(r){
+  if(outTotal(r) > 0){ r.status = 'open'; r.closedAt = null; return; }
+  r.status = 'closed';
+  r.closedAt = returnsOf(r).reduce((m,x)=> x.date > m ? x.date : m, r.start);
+}
+
+/* сколько штук позиции сейчас на руках у всех клиентов */
 function rentedQty(itemId, exceptRentalId){
   let q = 0;
   for(const r of state.rentals){
-    if(r.status !== 'open') continue;
     if(exceptRentalId && r.id === exceptRentalId) continue;
-    for(const l of r.lines) if(l.itemId === itemId) q += l.qty;
+    for(const l of r.lines) if(l.itemId === itemId) q += outQty(r, l);
   }
   return q;
 }
@@ -519,8 +626,28 @@ const freeQty = (itemId, exceptRentalId) => {
   return it.qty - rentedQty(itemId, exceptRentalId);
 };
 
-const rentalTotal = r => r.lines.reduce((s,l)=> s + l.qty * l.price * r.days, 0);
-const rentalDebt  = r => Math.max(0, rentalTotal(r) - (r.paid||0));
+/* ---------- расчёт суммы ----------
+   Вернули раньше срока — платят за фактические дни (минимум 1).
+   Вернули позже или ещё не вернули — платят за срок по договору, доплаты за просрочку нет. */
+const billedDays = (r, date) => Math.min(r.days, Math.max(1, diffDays(r.start, date)));
+
+function rentalTotal(r){
+  let sum = 0;
+  for(const l of r.lines){
+    let pcsDays = 0, back = 0;
+    for(const ret of returnsOf(r)) for(const x of ret.items){
+      if(x.itemId !== l.itemId) continue;
+      pcsDays += x.qty * billedDays(r, ret.date);
+      back += x.qty;
+    }
+    pcsDays += Math.max(0, l.qty - back) * r.days;
+    sum += pcsDays * l.price;
+  }
+  return sum;
+}
+const contractTotal = r => r.lines.reduce((s,l)=> s + l.qty * l.price * r.days, 0);
+const rentalDebt    = r => Math.max(0, rentalTotal(r) - (r.paid||0));
+const rentalOverpay = r => Math.max(0, (r.paid||0) - rentalTotal(r));
 
 /* статус сделки: closed | overdue | soon | open */
 function rentalState(r){
@@ -583,7 +710,7 @@ function renderKpis(){
   document.getElementById('kpis').innerHTML = `
     <div class="kpi"><div class="l">Активных аренд</div><div class="v">${open.length}</div></div>
     <div class="kpi"><div class="l">Просрочено</div><div class="v ${overdue.length?'bad':''}">${overdue.length}</div></div>
-    <div class="kpi"><div class="l">Щитов на руках</div><div class="v">${nf0.format(outPieces)} <span class="sub">/ ${nf0.format(totalPieces)}</span></div></div>
+    <div class="kpi"><div class="l">На руках</div><div class="v">${nf0.format(outPieces)} <span class="sub">/ ${nf0.format(totalPieces)}</span></div></div>
     <div class="kpi"><div class="l">Свободно на складе</div><div class="v ok">${nf0.format(totalPieces-outPieces)}</div></div>
     <div class="kpi"><div class="l">Сумма активных аренд</div><div class="v">${money(expected)}</div></div>
     <div class="kpi"><div class="l">Долг клиентов</div><div class="v ${debt?'warn':''}">${money(debt)}</div></div>`;
@@ -606,6 +733,8 @@ function renderRentals(){
     if(st==='overdue' && s!=='overdue') return false;
     if(st==='soon' && s!=='soon') return false;
     if(st==='debt' && rentalDebt(r)<=0) return false;
+    if(st==='overpay' && rentalOverpay(r)<=0) return false;
+    if(st==='partial' && !(r.status==='open' && returnsOf(r).length)) return false;
     if(from && r.start < from) return false;
     if(to && r.start > to) return false;
     if(q){
@@ -639,9 +768,21 @@ function renderRentals(){
     else                  leftCell = `<span class="badge b-ok">${left} ${plural(left,'день','дня','дней')}</span>`;
 
     const lines = r.lines.map(l=>{
-      const it = itemById(l.itemId);
-      return `<li>${esc(itemLabel(it))} — <b>${l.qty}</b> шт · ${nf2.format(l.price)} с./дн</li>`;
+      const it = itemById(l.itemId), out = outQty(r, l), u = unitOf(it);
+      const qty = (r.status==='open' && out < l.qty)
+        ? `на руках <b>${out}</b> из ${l.qty} ${u}`
+        : `<b>${l.qty}</b> ${u}`;
+      return `<li>${esc(itemLabel(it))} — ${qty} · ${nf2.format(l.price)} с./дн</li>`;
     }).join('');
+
+    const rets = returnsOf(r).slice().sort((a,b)=>a.date.localeCompare(b.date));
+    const retsHtml = (rets.length && !(r.status==='closed' && rets.length===1))
+      ? `<div class="rets">${rets.map(x=>{
+          const n = x.items.reduce((s,i)=>s+i.qty,0);
+          return `<span>↩ ${fmtD(x.date)} — ${n} шт</span>`;
+        }).join('')}</div>` : '';
+
+    const contract = contractTotal(r), overpay = rentalOverpay(r);
 
     const phone = (r.phone||'').trim();
     const tel = phone ? `<a href="tel:${esc(phone.replace(/[^\d+]/g,''))}" class="sub" style="color:var(--brand)">${esc(phone)}</a>` : '<span class="sub">—</span>';
@@ -650,17 +791,19 @@ function renderRentals(){
       <td class="c-main"><div class="strong">${esc(r.client)}</div>
           <div>${tel}</div>
           ${r.note?`<div class="sub">${esc(r.note)}</div>`:''}</td>
-      <td class="c-block" data-label="Позиции"><ul class="lines sub">${lines}</ul></td>
+      <td class="c-block" data-label="Позиции"><ul class="lines sub">${lines}</ul>${retsHtml}</td>
       <td class="nowrap" data-label="Взяли">${fmtD(r.start)}<div class="sub">${r.days} ${plural(r.days,'день','дня','дней')}</div></td>
       <td class="nowrap" data-label="Вернуть">${fmtD(addDays(r.start,r.days))}</td>
       <td data-label="Осталось">${leftCell}</td>
-      <td class="num strong" data-label="Сумма">${money(total)}</td>
+      <td class="num" data-label="Сумма"><span class="strong">${money(total)}</span>
+          ${total < contract ? `<div class="sub">по договору ${money(contract)}</div>` : ''}</td>
       <td class="num" data-label="Оплачено">${money(r.paid||0)}
-          ${debt>0?`<div class="sub" style="color:var(--bad)">долг ${money(debt)}</div>`
-                  :`<div class="sub" style="color:var(--ok)">оплачено</div>`}</td>
+          ${debt>0 ? `<div class="sub" style="color:var(--bad)">долг ${money(debt)}</div>`
+          : overpay>0 ? `<div class="sub" style="color:var(--warn)">переплата ${money(overpay)}</div>`
+          : `<div class="sub" style="color:var(--ok)">оплачено</div>`}</td>
       <td class="num" data-label="Залог">${r.deposit?money(r.deposit):'—'}</td>
       <td class="nowrap c-act">
-        ${r.status==='open'?`<button class="btn sm" onclick="closeRental('${r.id}')">Возврат</button> `:''}
+        ${r.status==='open'?`<button class="btn sm" onclick="openReturn('${r.id}')">Возврат</button> `:''}
         <button class="btn sm ghost" onclick="openRental('${r.id}')">Изменить</button>
       </td>
     </tr>`;
@@ -674,43 +817,51 @@ function renderCatalog(){
   const sort = document.getElementById('fC_sort').value;
 
   let rows = state.items.map(i=>({
-    it:i, rented:rentedQty(i.id), free:i.qty-rentedQty(i.id), area:i.w*i.h
+    it:i, rented:rentedQty(i.id), free:i.qty-rentedQty(i.id), area:itemArea(i)
   }));
 
   rows = rows.filter(r=>{
     if(onlyFree && r.free<=0) return false;
     if(q){
-      const hay = `${r.it.name} ${r.it.note||''} ${nf2.format(r.it.w)}x${nf2.format(r.it.h)}`
+      const hay = `${r.it.name} ${r.it.note||''} ${sizeStr(r.it,'x')}`
                     .toLowerCase().replace(/[х*]/g,'x').replace(/\s/g,'');
       if(!hay.includes(q.replace(/\s/g,''))) return false;
     }
     return true;
   });
 
+  // по названию, внутри — по высоте, потом по ширине: щиты идут группами 1 м, 1,5 м, 2 м
+  const byName = (a,b)=> a.name.localeCompare(b.name,'ru') || (+a.h||0)-(+b.h||0) || (+a.w||0)-(+b.w||0);
   rows.sort((a,b)=>{
+    if(sort==='order') return 0;              // как добавлены — базовый каталог идёт в порядке списка
     if(sort==='free') return b.free-a.free;
     if(sort==='price') return b.it.price-a.it.price;
     if(sort==='area') return b.area-a.area;
-    return a.it.name.localeCompare(b.it.name,'ru');
+    return byName(a.it, b.it);
   });
 
   document.getElementById('catCount').textContent =
     `${rows.length} ${plural(rows.length,'позиция','позиции','позиций')}`;
   document.getElementById('catEmpty').style.display = rows.length ? 'none' : '';
 
-  document.getElementById('catBody').innerHTML = rows.map(({it,rented,free,area})=>`
+  document.getElementById('catBody').innerHTML = rows.map(({it,rented,free,area})=>{
+    const size = sizeStr(it), u = unitOf(it);
+    const mob = [size, area ? `${nf2.format(area)} м²` : '', `<b>${nf2.format(it.price)} с./день</b>`]
+                  .filter(Boolean).join(' · ');
+    return `
     <tr>
       <td class="c-main"><div class="strong">${esc(it.name)}</div>
-        <div class="sub only-sm">${nf2.format(it.w)} × ${nf2.format(it.h)} м · ${nf2.format(area)} м² · <b>${nf2.format(it.price)} с./день</b></div></td>
-      <td class="nowrap hide-sm">${nf2.format(it.w)} × ${nf2.format(it.h)} м</td>
-      <td class="num hide-sm">${nf2.format(area)} м²</td>
+        <div class="sub only-sm">${mob}</div></td>
+      <td class="nowrap hide-sm">${size || '<span class="sub">—</span>'}</td>
+      <td class="num hide-sm">${area ? nf2.format(area)+' м²' : '<span class="sub">—</span>'}</td>
       <td class="num hide-sm">${nf2.format(it.price)}</td>
-      <td class="num" data-label="Всего">${it.qty}</td>
+      <td class="num" data-label="Всего">${it.qty} <span class="sub">${u}</span></td>
       <td class="num" data-label="В аренде">${rented}</td>
       <td class="num" data-label="Свободно"><span class="badge ${free>0?'b-ok':'b-mut'}">${free}</span></td>
       <td class="sub c-wide"${it.note?' data-label="Примечание"':''}>${esc(it.note||'')}</td>
       <td class="nowrap c-act"><button class="btn sm ghost" onclick="openItem('${it.id}')">Изменить</button></td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 
 function render(){ renderKpis(); renderRentals(); renderCatalog(); }
@@ -728,11 +879,12 @@ let editItemId = null;
 function openItem(id){
   editItemId = id || null;
   const it = id ? itemById(id) : null;
-  document.getElementById('itemTitle').textContent = it ? 'Редактирование позиции' : 'Новая опалубка';
+  document.getElementById('itemTitle').textContent = it ? 'Редактирование позиции' : 'Новая позиция';
   document.getElementById('i_name').value  = it ? it.name : '';
-  document.getElementById('i_w').value     = it ? it.w : '';
-  document.getElementById('i_h').value     = it ? it.h : '';
+  document.getElementById('i_w').value     = it && +it.w ? it.w : '';
+  document.getElementById('i_h').value     = it && +it.h ? it.h : '';
   document.getElementById('i_qty').value   = it ? it.qty : '';
+  document.getElementById('i_unit').value  = unitOf(it);
   document.getElementById('i_price').value = it ? it.price : '';
   document.getElementById('i_note').value  = it ? (it.note||'') : '';
   document.getElementById('i_del').style.display = it ? '' : 'none';
@@ -745,7 +897,7 @@ function openItem(id){
 
 function itemPreview(){
   const w = num(document.getElementById('i_w').value), h = num(document.getElementById('i_h').value);
-  document.getElementById('i_prev').textContent = (w&&h) ? `Площадь одного щита: ${nf2.format(w*h)} м²` : '';
+  document.getElementById('i_prev').textContent = (w&&h) ? `Площадь одной единицы: ${nf2.format(w*h)} м²` : '';
 }
 
 function itemErr(msg){
@@ -757,20 +909,21 @@ function saveItem(){
   const name = document.getElementById('i_name').value.trim();
   const w = num(document.getElementById('i_w').value), h = num(document.getElementById('i_h').value);
   const qty = Math.round(num(document.getElementById('i_qty').value));
+  const unit = document.getElementById('i_unit').value;
   const price = num(document.getElementById('i_price').value);
   const note = document.getElementById('i_note').value.trim();
 
   if(!name) return itemErr('Укажите название.');
-  if(w<=0 || h<=0) return itemErr('Ширина и высота должны быть больше нуля.');
+  if(w<0 || h<0) return itemErr('Размеры не могут быть отрицательными.');
   if(qty<0) return itemErr('Количество не может быть отрицательным.');
   if(price<0) return itemErr('Цена не может быть отрицательной.');
 
   if(editItemId){
     const out = rentedQty(editItemId);
-    if(qty < out) return itemErr(`Сейчас в аренде ${out} шт — количество не может быть меньше.`);
-    Object.assign(itemById(editItemId), {name,w,h,qty,price,note});
+    if(qty < out) return itemErr(`Сейчас в аренде ${out} ${unit} — количество не может быть меньше.`);
+    Object.assign(itemById(editItemId), {name,w,h,qty,unit,price,note});
   }else{
-    state.items.push({id:uid(),name,w,h,qty,price,note});
+    state.items.push({id:uid(),name,w,h,qty,unit,price,note});
   }
   save(); render(); closeModal('ovItem');
 }
@@ -807,6 +960,7 @@ function openRental(id){
 
   draftLines = r ? r.lines.map(l=>({...l})) : [];
   if(!draftLines.length) draftLines.push({itemId:'', qty:1, price:0});
+  renderRetLog();
   renderLines();
   document.getElementById('ovRent').classList.add('open');
   lockScroll(true);
@@ -824,8 +978,7 @@ function renderLines(){
       })).join('');
     const it = itemById(l.itemId);
     const free = it ? freeQty(it.id, editRentId) : 0;
-    const days = Math.max(1, Math.round(num(document.getElementById('r_days').value)));
-    const amt = it ? l.qty * it.price * days : 0;
+    const amt = it ? lineAmount(l) : 0;
     return `<div class="line-row">
       <select onchange="setLineItem(${idx}, this.value)">${opts}</select>
       <input type="number" inputmode="numeric" min="1" step="1" value="${l.qty}"
@@ -841,10 +994,31 @@ function renderLines(){
 function updateLineAmt(i){
   const el = document.getElementById('amt'+i);
   if(!el) return;
-  const l = draftLines[i], it = itemById(l.itemId);
-  const days = Math.max(1, Math.round(num(document.getElementById('r_days').value)));
-  el.textContent = it ? money(l.qty * it.price * days) : '—';
+  const l = draftLines[i];
+  el.textContent = itemById(l.itemId) ? money(lineAmount(l)) : '—';
 }
+
+/* цена строки: у существующей сделки — зафиксированная при выдаче, у новой — из каталога */
+function draftPrice(itemId){
+  const ex = editRentId ? state.rentals.find(r=>r.id===editRentId) : null;
+  const old = ex ? ex.lines.find(x=>x.itemId===itemId) : null;
+  if(old) return old.price;
+  const it = itemById(itemId);
+  return it ? it.price : 0;
+}
+
+/* черновик сделки из полей формы — чтобы считать суммы той же функцией, что и в списке */
+function draftRental(lines){
+  const ex = editRentId ? state.rentals.find(r=>r.id===editRentId) : null;
+  return {
+    start: document.getElementById('r_start').value || todayISO(),
+    days: Math.max(1, Math.round(num(document.getElementById('r_days').value))),
+    lines: (lines || draftLines).filter(l=>itemById(l.itemId))
+             .map(l=>({itemId:l.itemId, qty:l.qty, price:draftPrice(l.itemId)})),
+    returns: ex ? returnsOf(ex) : []
+  };
+}
+const lineAmount = l => rentalTotal(draftRental([l]));
 
 function setLineItem(i, id){
   draftLines[i].itemId = id;
@@ -861,24 +1035,29 @@ function rentCalc(){
   const days = Math.max(1, Math.round(num(document.getElementById('r_days').value)));
   document.getElementById('r_end').value = fmtD(addDays(start, days));
 
-  let total = 0, pieces = 0;
-  draftLines.forEach((l,i)=>{
-    updateLineAmt(i);
-    const it = itemById(l.itemId);
-    if(!it) return;
-    total += l.qty * it.price * days;
-    pieces += l.qty;
-  });
+  draftLines.forEach((l,i)=>updateLineAmt(i));
+  const d = draftRental();
+  const total = rentalTotal(d), contract = contractTotal(d);
+  const pieces = pcsTotal(d), out = outTotal(d);
   const dep = num(document.getElementById('r_dep').value);
   const paid = num(document.getElementById('r_paid').value);
-  const debt = Math.max(0, total - paid);
+  const debt = Math.max(0, total - paid), over = Math.max(0, paid - total);
+
+  let bottom;
+  if(debt > 0)      bottom = `<div class="row big"><span>Остаток к оплате</span><span>${money(debt)}</span></div>`;
+  else if(over > 0) bottom = `<div class="row big" style="color:var(--warn)"><span>Переплата — вернуть клиенту</span><span>${money(over)}</span></div>`;
+  else              bottom = `<div class="row big"><span>Итого</span><span>${money(total)}</span></div>`;
 
   document.getElementById('r_tot').innerHTML = `
-    <div class="row"><span>Щитов в сделке</span><span>${pieces} шт</span></div>
+    <div class="row"><span>Всего в сделке</span><span>${pieces} шт${out < pieces ? ` · на руках ${out}` : ''}</span></div>
     <div class="row"><span>Срок</span><span>${days} ${plural(days,'день','дня','дней')} · до ${fmtD(addDays(start,days))}</span></div>
+    ${total < contract ? `
+    <div class="row"><span>По договору</span><span>${money(contract)}</span></div>
+    <div class="row"><span>С учётом ранних возвратов</span><span>${money(total)}</span></div>` : `
+    <div class="row"><span>Сумма аренды</span><span>${money(total)}</span></div>`}
     <div class="row"><span>Залог (возвратный)</span><span>${money(dep)}</span></div>
     <div class="row"><span>Оплачено</span><span>${money(paid)}</span></div>
-    <div class="row big"><span>${debt>0?'Остаток к оплате':'К оплате'}</span><span>${debt>0?money(debt):money(total)}</span></div>`;
+    ${bottom}`;
   window._rentTotal = total;
 }
 
@@ -917,11 +1096,25 @@ function saveRental(){
     merged.set(l.itemId, cur);
   }
   const existing = editRentId ? state.rentals.find(r=>r.id===editRentId) : null;
+
+  if(existing){
+    const rets = returnsOf(existing);
+    const early = rets.find(x=>x.date < start);
+    if(early) return rentErr(`Дата выдачи не может быть позже возврата от ${fmtD(early.date)}.`);
+    // позицию, по которой уже был возврат, нельзя убрать из сделки
+    for(const x of rets) for(const i of x.items){
+      if(!merged.has(i.itemId))
+        return rentErr(`По «${itemLabel(itemById(i.itemId))}» уже есть возврат — сначала удалите его в разделе «Возвраты».`);
+    }
+  }
+
   for(const l of merged.values()){
     const it = itemById(l.itemId);
-    // при редактировании закрытой сделки остатки не трогаем
-    const free = (existing && existing.status==='closed') ? it.qty : freeQty(l.itemId, editRentId);
-    if(l.qty > free) return rentErr(`«${itemLabel(it)}»: свободно ${free} шт, запрошено ${l.qty}.`);
+    const back = existing ? returnedQty(existing, l.itemId) : 0;
+    if(l.qty < back) return rentErr(`«${itemLabel(it)}»: клиент уже вернул ${back} шт — меньше указать нельзя.`);
+    // на складе должно хватить того, что ещё не вернули
+    const need = l.qty - back, free = freeQty(l.itemId, editRentId);
+    if(need > free) return rentErr(`«${itemLabel(it)}»: свободно ${free} шт, нужно ${need}.`);
     // цену фиксируем на момент сделки (для новых строк — текущую из каталога)
     const old = existing ? existing.lines.find(x=>x.itemId===l.itemId) : null;
     l.price = old ? old.price : it.price;
@@ -930,10 +1123,11 @@ function saveRental(){
 
   if(existing){
     Object.assign(existing, {client, phone, start, days, deposit, paid, note, lines:finalLines});
+    syncStatus(existing);
   }else{
     state.rentals.push({
-      id:uid(), client, phone, start, days, deposit, paid, note,
-      lines:finalLines, status:'open', closedAt:null, createdAt:new Date().toISOString()
+      id:uid(), client, phone, start, days, deposit, paid, note, lines:finalLines, returns:[],
+      status:'open', closedAt:null, createdAt:new Date().toISOString()
     });
   }
   save(); render(); closeModal('ovRent');
@@ -941,23 +1135,163 @@ function saveRental(){
 
 function deleteRental(){
   if(!editRentId) return;
-  if(!confirm('Удалить сделку? Щиты вернутся на склад.')) return;
+  if(!confirm('Удалить сделку? Всё выданное по ней вернётся на склад.')) return;
   state.rentals = state.rentals.filter(r=>r.id!==editRentId);
   save(); render(); closeModal('ovRent');
 }
 
-function closeRental(id){
+/* ---------- журнал возвратов в форме сделки ---------- */
+function retItemsText(items){
+  return items.map(i=>`${esc(itemLabel(itemById(i.itemId)))} × ${i.qty}`).join(', ');
+}
+
+function renderRetLog(){
+  const ex = editRentId ? state.rentals.find(r=>r.id===editRentId) : null;
+  const sec = document.getElementById('r_retsec');
+  if(!ex || !returnsOf(ex).length){ sec.style.display = 'none'; return; }
+  sec.style.display = '';
+  document.getElementById('r_rets').innerHTML = returnsOf(ex).slice()
+    .sort((a,b)=>a.date.localeCompare(b.date))
+    .map(x=>`<li>
+      <span class="d">${fmtD(x.date)}</span>
+      <span class="w">${retItemsText(x.items)}</span>
+      <button class="x" onclick="deleteReturn('${x.id}')" title="удалить возврат">×</button>
+    </li>`).join('');
+}
+
+function deleteReturn(retId){
+  const r = state.rentals.find(x=>x.id===editRentId);
+  const ret = r && returnsOf(r).find(x=>x.id===retId);
+  if(!ret) return;
+  // щиты могли уже уйти другому клиенту — тогда отмена возврата уведёт склад в минус
+  for(const i of ret.items){
+    const free = freeQty(i.itemId);
+    if(i.qty > free)
+      return alert(`Нельзя: «${itemLabel(itemById(i.itemId))}» свободно только ${free} шт — остальные уже выданы другим клиентам.`);
+  }
+  const n = ret.items.reduce((s,i)=>s+i.qty,0);
+  if(!confirm(`Удалить возврат от ${fmtD(ret.date)}?\n${n} шт снова будут числиться на руках у «${r.client}».`)) return;
+  r.returns = returnsOf(r).filter(x=>x.id!==retId);
+  syncStatus(r);
+  save(); render(); renderRetLog(); rentCalc();
+}
+
+/* ---------- форма возврата ---------- */
+let retRentId = null;
+let retDraft = {};   // itemId -> сколько привезли
+
+const retRental = () => state.rentals.find(x=>x.id===retRentId);
+
+function openReturn(id){
   const r = state.rentals.find(x=>x.id===id);
   if(!r) return;
-  const debt = rentalDebt(r);
-  const pieces = r.lines.reduce((s,l)=>s+l.qty,0);
-  let msg = `Принять возврат ${pieces} шт от «${r.client}»?`;
-  if(debt>0) msg += `\n\nВнимание: остаток долга ${money(debt)}.`;
-  if(r.deposit>0) msg += `\nВернуть залог: ${money(r.deposit)}.`;
-  if(!confirm(msg)) return;
-  r.status = 'closed';
-  r.closedAt = todayISO();
-  save(); render();
+  retRentId = id;
+  document.getElementById('retTitle').textContent = `Возврат — ${r.client}`;
+  const d = document.getElementById('ret_date');
+  d.value = todayISO(); d.min = r.start; d.max = todayISO();
+  document.getElementById('ret_err').classList.remove('show');
+  retDraft = {};
+  for(const l of r.lines) if(outQty(r,l) > 0) retDraft[l.itemId] = outQty(r,l);   // по умолчанию — всё
+  renderRetRows();
+  document.getElementById('ovReturn').classList.add('open');
+  lockScroll(true);
+}
+
+function renderRetRows(){
+  const r = retRental();
+  document.getElementById('ret_rows').innerHTML = r.lines.filter(l=>outQty(r,l) > 0).map(l=>{
+    const out = outQty(r,l), id = l.itemId;
+    return `<div class="ret-row">
+      <div><div class="nm">${esc(itemLabel(itemById(id)))}</div>
+           <div class="sub">на руках ${out} ${unitOf(itemById(id))}${out < l.qty ? ` из ${l.qty}` : ''}</div></div>
+      <div class="stepper">
+        <button onclick="retStep('${id}',-1)" aria-label="меньше">−</button>
+        <input type="number" inputmode="numeric" min="0" max="${out}" id="rq_${id}"
+               value="${retDraft[id]||0}" oninput="retSet('${id}', this.value)">
+        <button onclick="retStep('${id}',1)" aria-label="больше">+</button>
+      </div>
+    </div>`;
+  }).join('');
+  retCalc();
+}
+
+function retMax(itemId){
+  const r = retRental(), l = r.lines.find(x=>x.itemId===itemId);
+  return l ? outQty(r,l) : 0;
+}
+function retStep(itemId, d){
+  const v = Math.min(retMax(itemId), Math.max(0, (retDraft[itemId]||0) + d));
+  retDraft[itemId] = v;
+  document.getElementById('rq_'+itemId).value = v;
+  retCalc();
+}
+function retSet(itemId, raw){
+  const max = retMax(itemId);
+  let v = Math.max(0, Math.round(num(raw)));
+  if(v > max){ v = max; document.getElementById('rq_'+itemId).value = v; }
+  retDraft[itemId] = v;
+  retCalc();
+}
+function retFill(all){
+  for(const id of Object.keys(retDraft)){
+    retDraft[id] = all ? retMax(id) : 0;
+    document.getElementById('rq_'+id).value = retDraft[id];
+  }
+  retCalc();
+}
+
+function retItems(){
+  return Object.entries(retDraft).filter(([,q])=>q>0).map(([itemId,qty])=>({itemId, qty}));
+}
+
+function retCalc(){
+  const r = retRental();
+  const date = document.getElementById('ret_date').value || todayISO();
+  const items = retItems();
+  const n = items.reduce((s,i)=>s+i.qty,0);
+  const left = outTotal(r) - n;
+
+  // считаем «как будет», прогоняя сделку с этим возвратом через ту же функцию суммы
+  const after = {...r, returns:[...returnsOf(r), {date, items}]};
+  const before = rentalTotal(r), total = rentalTotal(after);
+  const paid = r.paid||0, debt = Math.max(0,total-paid), over = Math.max(0,paid-total);
+  const bd = billedDays(r, date);
+
+  let html = `<div class="row"><span>Принимаете</span><span>${n} шт</span></div>`;
+  html += left > 0
+    ? `<div class="row"><span>Останется на руках</span><span>${left} шт</span></div>`
+    : `<div class="row"><span>Сделка</span><span>закроется</span></div>`;
+  if(n > 0 && bd < r.days)
+    html += `<div class="row"><span>Возвращённое оплачивается за</span><span>${bd} ${plural(bd,'день','дня','дней')} из ${r.days}</span></div>`;
+  html += total < before
+    ? `<div class="row"><span>Сумма аренды</span><span><s class="sub">${money(before)}</s> ${money(total)}</span></div>`
+    : `<div class="row"><span>Сумма аренды</span><span>${money(total)}</span></div>`;
+  html += `<div class="row"><span>Оплачено</span><span>${money(paid)}</span></div>`;
+  if(debt > 0)      html += `<div class="row big"><span>Остаток к оплате</span><span>${money(debt)}</span></div>`;
+  else if(over > 0) html += `<div class="row big" style="color:var(--warn)"><span>Переплата — вернуть клиенту</span><span>${money(over)}</span></div>`;
+  else              html += `<div class="row big"><span>Оплачено полностью</span><span>✓</span></div>`;
+  if(left === 0 && r.deposit > 0)
+    html += `<div class="row" style="margin-top:6px"><span>Вернуть залог</span><span class="strong">${money(r.deposit)}</span></div>`;
+  document.getElementById('ret_tot').innerHTML = html;
+
+  const ok = document.getElementById('ret_ok');
+  ok.disabled = n === 0;
+  ok.style.opacity = n === 0 ? .5 : 1;
+  ok.textContent = n === 0 ? 'Укажите количество' : left === 0 ? 'Принять и закрыть сделку' : `Принять ${n} шт`;
+}
+
+function saveReturn(){
+  const r = retRental();
+  const date = document.getElementById('ret_date').value;
+  const err = msg => { const e=document.getElementById('ret_err'); e.textContent=msg; e.classList.add('show'); };
+  if(!date) return err('Укажите дату возврата.');
+  if(date < r.start) return err(`Дата возврата раньше даты выдачи (${fmtD(r.start)}).`);
+  if(date > todayISO()) return err('Дата возврата не может быть в будущем.');
+  const items = retItems();
+  if(!items.length) return err('Укажите, сколько привезли.');
+  returnsOf(r).push({id:uid(), date, items});
+  syncStatus(r);
+  save(); render(); closeModal('ovReturn');
 }
 
 /* ===================== экспорт / импорт ===================== */
@@ -996,6 +1330,7 @@ function importData(input){
       if(!Array.isArray(p.items) || !Array.isArray(p.rentals)) throw new Error('неверная структура файла');
       if(!confirm('Импорт заменит все текущие данные. Продолжить?')) return;
       state = {items:p.items, rentals:p.rentals};
+      migrate();
       save(); render();
     }catch(e){ alert('Не удалось прочитать файл: '+e.message); }
     input.value = '';
@@ -1003,27 +1338,62 @@ function importData(input){
   rd.readAsText(f);
 }
 
-/* ===================== демо-данные ===================== */
-function seedDemo(){
-  if(state.items.length || state.rentals.length){
-    if(!confirm('Демо-данные заменят всё, что уже введено. Продолжить?')) return;
-  }
-  state.items = [
-    {id:uid(), name:'Щит стеновой', w:2, h:1,   qty:40, price:5,  note:'ламинированная фанера'},
-    {id:uid(), name:'Щит стеновой', w:1.5, h:1, qty:30, price:4,  note:''},
-    {id:uid(), name:'Щит стеновой', w:1, h:1,   qty:50, price:3,  note:''},
-    {id:uid(), name:'Угловой элемент', w:0.3, h:1, qty:20, price:2.5, note:'внутренний угол'},
-    {id:uid(), name:'Щит перекрытия', w:3, h:1, qty:15, price:8,  note:''}
-  ];
-  const a = state.items[0], b = state.items[2];
-  state.rentals = [
-    {id:uid(), client:'Рахимов Ф.', phone:'+992 900 11-22-33', start:addDays(todayISO(),-5), days:14,
-     deposit:500, paid:1000, note:'объект на Айни', lines:[{itemId:a.id,qty:12,price:a.price},{itemId:b.id,qty:8,price:b.price}],
-     status:'open', closedAt:null, createdAt:new Date().toISOString()},
-    {id:uid(), client:'ООО «Строй-Сити»', phone:'+992 918 44-55-66', start:addDays(todayISO(),-20), days:15,
-     deposit:1500, paid:0, note:'', lines:[{itemId:a.id,qty:10,price:a.price}],
-     status:'open', closedAt:null, createdAt:new Date().toISOString()}
-  ];
+/* ===================== базовый каталог ===================== */
+/* [название, ширина м, высота/длина м, количество, цена с./день, единица] — 0 = размера нет */
+const CATALOG_VERSION = '2026-09-28';
+const DEFAULT_CATALOG = [
+  ['Дамкрат', 0,   1,   30, 1],
+  ['Дамкрат', 0,   2,   25, 1.5],
+  ['Дамкрат', 0,   3.4, 75, 2],
+
+  ['Щит', 0.3, 1,   10, 3],
+  ['Щит', 0.4, 1,   12, 3],
+  ['Щит', 0.5, 0.9, 10, 4],
+  ['Щит', 0.5, 1,    8, 3],
+  ['Щит', 0.6, 1,    6, 4],
+  ['Щит', 0.7, 1,    4, 4],
+  ['Щит', 0.8, 1,    6, 5],
+  ['Щит', 1,   1,    5, 5],
+
+  ['Щит', 0.3, 1.5, 12, 3],
+  ['Щит', 0.4, 1.5, 12, 3],
+  ['Щит', 0.5, 1.5, 30, 4],
+  ['Щит', 0.6, 1.5, 12, 4],
+  ['Щит', 0.7, 1.5,  8, 5],
+  ['Щит', 0.8, 1.5,  8, 5],
+  ['Щит', 1,   1.5, 50, 5],
+
+  ['Щит', 0.3, 2, 12, 3],
+  ['Щит', 0.4, 2, 18, 3],
+  ['Щит', 0.5, 2, 50, 4],
+  ['Щит', 0.6, 2, 14, 5],
+  ['Щит', 0.7, 2,  8, 5],
+  ['Щит', 0.8, 2,  8, 5],
+  ['Щит', 1,   2, 50, 6],
+
+  ['Леса',    0, 0, 30, 6,  'компл.'],
+  ['Мешалка', 0, 0,  4, 50],
+  ['Карита',  0, 0,  4, 10],
+  ['Бочка',   0, 0,  4, 10]
+];
+const defaultItems = () => DEFAULT_CATALOG.map(([name,w,h,qty,price,unit])=>
+  ({id:uid(), name, w, h, qty, price, unit:unit||'шт', note:''}));
+
+/* Один раз на устройстве заменяем каталог на базовый. Сделки не трогаем:
+   позиции из старого каталога в них будут показаны как «удалённая позиция». */
+function applyCatalogUpdate(){
+  let v = null;
+  try{ v = localStorage.getItem(KEY+'.catalog'); }catch(e){}
+  if(v === CATALOG_VERSION) return;
+  state.items = defaultItems();
+  save();
+  try{ localStorage.setItem(KEY+'.catalog', CATALOG_VERSION); }catch(e){}
+}
+
+function loadDefaultCatalog(){
+  if(state.items.length &&
+     !confirm(`Заменить каталог базовым списком (${DEFAULT_CATALOG.length} позиций)?\nВсе текущие позиции каталога будут удалены. Сделки останутся.`)) return;
+  state.items = defaultItems();
   save(); render();
 }
 
@@ -1058,6 +1428,7 @@ window.addEventListener('appinstalled', ()=>{
 
 /* ===================== старт ===================== */
 load();
+applyCatalogUpdate();
 document.getElementById('r_start').value = todayISO();
 render();
 checkBackup();
