@@ -289,10 +289,6 @@
     <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importData(this)">
   </header>
 
-  <div class="note info" id="noteUpdate">
-    <span>Вышла новая версия приложения.</span>
-    <button class="btn" onclick="location.reload()">Обновить</button>
-  </div>
   <div class="note info" id="noteInstall">
     <span>Добавьте приложение на главный экран — откроется без адресной строки.</span>
     <button class="btn" onclick="doInstall()">Установить</button>
@@ -1397,15 +1393,14 @@ function loadDefaultCatalog(){
   save(); render();
 }
 
-/* ===================== PWA: офлайн и установка ===================== */
-if('serviceWorker' in navigator && location.protocol.startsWith('http')){
-  window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('sw.js').catch(e=>console.warn('SW:', e));
-  });
-  navigator.serviceWorker.addEventListener('message', e=>{
-    if(e.data && e.data.type === 'update-ready')
-      document.getElementById('noteUpdate').classList.add('show');
-  });
+/* ===================== установка на главный экран ===================== */
+/* Офлайн-режима нет: страница всегда грузится с GitHub Pages. Если на устройстве остался
+   service worker от прежней версии, удаляем его вместе с кэшем. */
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});
+}
+if('caches' in window){
+  caches.keys().then(ks=>ks.forEach(k=>caches.delete(k))).catch(()=>{});
 }
 
 let installPrompt = null;
