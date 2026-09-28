@@ -127,6 +127,11 @@
        font-size:13px;display:none}
   .err.show{display:block}
 
+  /* ---------- размеры ---------- */
+  .sz{font-weight:800;color:var(--ink);white-space:nowrap;font-variant-numeric:tabular-nums;font-size:15px}
+  .sub .sz, .ret-log .sz{font-size:14px}
+  .sz-m{display:none}
+
   /* ---------- возвраты ---------- */
   .rets{display:flex;flex-wrap:wrap;gap:2px 10px;margin-top:6px;font-size:12px;color:var(--brand)}
   .ret-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;
@@ -166,6 +171,8 @@
     body{font-size:15px}
     .wrap{padding:0 0 calc(92px + env(safe-area-inset-bottom))}
     .only-sm{display:block}
+    .sz-m{display:inline}
+    td.c-main .sz{font-size:18px}
     .hide-sm{display:none !important}
 
     /* поля: 16px, чтобы iOS не зумил при фокусе; крупные тач-цели */
@@ -588,6 +595,9 @@ function sizeStr(it, sep=' × '){
 const itemArea = it => (+it.w || 0) * (+it.h || 0);
 const unitOf = it => (it && it.unit) || 'шт';
 const itemLabel = it => it ? [it.name, sizeStr(it,'×')].filter(Boolean).join(' ') : 'удалённая позиция';
+/* то же для разметки: размер жирным, чтобы сразу бросался в глаза */
+const sizeHtml = (it, sep='×') => { const s = it ? sizeStr(it, sep) : ''; return s ? `<span class="sz">${s}</span>` : ''; };
+const itemLabelHtml = it => it ? [esc(it.name), sizeHtml(it)].filter(Boolean).join(' ') : 'удалённая позиция';
 
 /* ---------- возвраты ----------
    r.returns = [{id, date, items:[{itemId, qty}]}] — журнал возвратов сделки.
@@ -768,7 +778,7 @@ function renderRentals(){
       const qty = (r.status==='open' && out < l.qty)
         ? `на руках <b>${out}</b> из ${l.qty} ${u}`
         : `<b>${l.qty}</b> ${u}`;
-      return `<li>${esc(itemLabel(it))} — ${qty} · ${nf2.format(l.price)} с./дн</li>`;
+      return `<li>${itemLabelHtml(it)} — ${qty} · ${nf2.format(l.price)} с./дн</li>`;
     }).join('');
 
     const rets = returnsOf(r).slice().sort((a,b)=>a.date.localeCompare(b.date));
@@ -842,13 +852,13 @@ function renderCatalog(){
 
   document.getElementById('catBody').innerHTML = rows.map(({it,rented,free,area})=>{
     const size = sizeStr(it), u = unitOf(it);
-    const mob = [size, area ? `${nf2.format(area)} м²` : '', `<b>${nf2.format(it.price)} с./день</b>`]
+    const mob = [area ? `${nf2.format(area)} м²` : '', `<b>${nf2.format(it.price)} с./день</b>`]
                   .filter(Boolean).join(' · ');
     return `
     <tr>
-      <td class="c-main"><div class="strong">${esc(it.name)}</div>
+      <td class="c-main"><div class="strong">${esc(it.name)}<span class="sz-m"> ${sizeHtml(it,' × ')}</span></div>
         <div class="sub only-sm">${mob}</div></td>
-      <td class="nowrap hide-sm">${size || '<span class="sub">—</span>'}</td>
+      <td class="nowrap hide-sm">${size ? sizeHtml(it,' × ') : '<span class="sub">—</span>'}</td>
       <td class="num hide-sm">${area ? nf2.format(area)+' м²' : '<span class="sub">—</span>'}</td>
       <td class="num hide-sm">${nf2.format(it.price)}</td>
       <td class="num" data-label="Всего">${it.qty} <span class="sub">${u}</span></td>
@@ -1138,7 +1148,7 @@ function deleteRental(){
 
 /* ---------- журнал возвратов в форме сделки ---------- */
 function retItemsText(items){
-  return items.map(i=>`${esc(itemLabel(itemById(i.itemId)))} × ${i.qty}`).join(', ');
+  return items.map(i=>`${itemLabelHtml(itemById(i.itemId))} — ${i.qty}`).join(', ');
 }
 
 function renderRetLog(){
@@ -1198,7 +1208,7 @@ function renderRetRows(){
   document.getElementById('ret_rows').innerHTML = r.lines.filter(l=>outQty(r,l) > 0).map(l=>{
     const out = outQty(r,l), id = l.itemId;
     return `<div class="ret-row">
-      <div><div class="nm">${esc(itemLabel(itemById(id)))}</div>
+      <div><div class="nm">${itemLabelHtml(itemById(id))}</div>
            <div class="sub">на руках ${out} ${unitOf(itemById(id))}${out < l.qty ? ` из ${l.qty}` : ''}</div></div>
       <div class="stepper">
         <button onclick="retStep('${id}',-1)" aria-label="меньше">−</button>
