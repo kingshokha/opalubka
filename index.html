@@ -132,8 +132,47 @@
   .sub .sz, .ret-log .sz{font-size:14px}
   .sz-m{display:none}
 
+  /* ---------- Google Таблица ---------- */
+  .sync-chip{display:none;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:99px;
+             padding:6px 11px;font:inherit;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap}
+  .sync-chip.on{display:inline-flex}
+  .sync-chip .d{width:8px;height:8px;border-radius:50%;background:currentColor}
+  .sync-chip.s-ok{color:var(--ok)} .sync-chip.s-saving{color:var(--brand)}
+  .sync-chip.s-offline{color:var(--warn)} .sync-chip.s-error{color:var(--bad)}
+  .sync-state{padding:10px 12px;border-radius:9px;background:#f4f5f7;font-size:13px;line-height:1.5}
+  .sync-state.s-ok{background:var(--ok-soft)} .sync-state.s-offline{background:var(--warn-soft)}
+  .sync-state.s-error{background:var(--bad-soft)} .sync-state.s-saving{background:var(--brand-soft)}
+  .howto{margin-top:16px;border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+  .howto summary{cursor:pointer;font-weight:600}
+  .howto ol{margin:10px 0;padding-left:20px;font-size:13.5px;line-height:1.55}
+  .howto li{margin-bottom:6px}
+  .howto code{background:#f1f3f5;padding:1px 5px;border-radius:4px;font-size:12.5px}
+
+  /* ---------- история ---------- */
+  .cl-head{display:flex;align-items:center;justify-content:space-between;gap:6px}
+  #rentBody td.c-main{min-width:150px}
+  .hist-btn{flex:0 0 auto;margin:-6px -6px -6px 0;width:36px;height:36px;border:0;border-radius:50%;padding:0;
+            background:transparent;color:var(--brand);display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .hist-btn:hover{background:var(--brand-soft)}
+  .hist-btn svg{width:22px;height:22px;fill:currentColor}
+  .tl{list-style:none;margin:0;padding:0}
+  .tl > li{position:relative;padding:0 0 18px 26px}
+  .tl > li::before{content:"";position:absolute;left:5px;top:16px;bottom:-2px;width:2px;background:var(--line)}
+  .tl > li:last-child::before{display:none}
+  .tl .dot{position:absolute;left:0;top:4px;width:12px;height:12px;border-radius:50%;background:var(--muted);
+           box-shadow:0 0 0 3px var(--panel)}
+  .tl .h-create .dot,.tl .h-return .dot{background:var(--brand)}
+  .tl .h-pay .dot{background:var(--ok)}
+  .tl .h-close .dot{background:var(--ink)}
+  .tl .h-reopen .dot{background:var(--warn)}
+  .tl .h-undo .dot{background:var(--bad)}
+  .tl .when{font-size:12px;color:var(--muted)}
+  .tl .what{font-weight:700;margin:1px 0 3px}
+  .tl .det{margin:0;padding:0;list-style:none;font-size:13px;color:#374151}
+  .tl .det li{padding:1px 0}
+  .tl .det .sz{font-size:13.5px}
+
   /* ---------- возвраты ---------- */
-  .rets{display:flex;flex-wrap:wrap;gap:2px 10px;margin-top:6px;font-size:12px;color:var(--brand)}
   .ret-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;
            padding:10px 0;border-bottom:1px solid var(--line)}
   .ret-row:last-child{border-bottom:0}
@@ -172,6 +211,10 @@
     .wrap{padding:0 0 calc(92px + env(safe-area-inset-bottom))}
     .only-sm{display:block}
     .sz-m{display:inline}
+    tbody tr{position:relative}
+    #rentBody td.c-main{padding-right:52px}
+    .hist-btn{position:absolute;top:8px;right:8px;margin:0;width:44px;height:44px;background:var(--brand-soft)}
+    .hist-btn svg{width:24px;height:24px}
     td.c-main .sz{font-size:18px}
     .hide-sm{display:none !important}
 
@@ -285,9 +328,11 @@
       <button id="tab-rent" class="active" onclick="switchTab('rent')">Аренды</button>
       <button id="tab-cat" onclick="switchTab('cat')">Каталог и склад</button>
     </nav>
+    <button class="sync-chip" id="syncChip" onclick="openSync()" aria-label="Google Таблица"></button>
     <details class="menu" id="topMenu">
       <summary class="btn">Ещё ▾</summary>
       <div class="menu-pop">
+        <button class="btn" onclick="menuDo(openSync)">Google Таблица</button>
         <button class="btn" onclick="menuDo(exportData)">⬇ Экспорт в файл</button>
         <button class="btn" onclick="menuDo(()=>document.getElementById('importFile').click())">⬆ Импорт из файла</button>
         <button class="btn" onclick="menuDo(loadDefaultCatalog)">Загрузить базовый каталог</button>
@@ -303,6 +348,11 @@
   <div class="note warn" id="noteBackup">
     <span id="noteBackupText"></span>
     <button class="btn" onclick="exportData()">Сохранить копию</button>
+  </div>
+
+  <div class="note warn" id="noteSync">
+    <span id="noteSyncText"></span>
+    <button class="btn" onclick="document.getElementById('noteSync').classList.remove('show')">Понятно</button>
   </div>
 
   <div class="kpis" id="kpis"></div>
@@ -502,6 +552,61 @@
   </div>
 </div>
 
+<!-- ============ МОДАЛКА: GOOGLE ТАБЛИЦА ============ -->
+<div class="overlay" id="ovSync">
+  <div class="modal" style="max-width:620px">
+    <div class="mhead"><h3>Google Таблица</h3>
+      <button class="btn ghost" style="margin-left:auto" onclick="closeModal('ovSync')">✕</button></div>
+    <div class="mbody">
+      <div class="sync-state" id="syncState"></div>
+      <div class="grid" style="margin-top:14px">
+        <div class="field"><label>Адрес веб-приложения</label>
+          <input id="s_url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+        <div class="field"><label>Ваше имя</label><input id="s_name" placeholder="будет видно в истории сделок" autocomplete="name"></div>
+      </div>
+      <div class="err" id="s_err"></div>
+
+      <details class="howto" id="howto">
+        <summary>Как подключить таблицу — 5 минут, удобнее с компьютера</summary>
+        <ol>
+          <li>Создайте новую Google Таблицу: <a href="https://sheets.new" target="_blank" rel="noopener">sheets.new</a>.</li>
+          <li>В таблице откройте меню <b>«Расширения» → «Apps Script»</b>. Удалите всё, что есть в редакторе, и вставьте код скрипта:
+            <div style="margin:6px 0"><button class="btn sm" onclick="copyScript()">Скопировать код скрипта</button>
+            <span class="sub" id="s_copied"></span></div></li>
+          <li>Сохраните: <b>Ctrl+S</b>.</li>
+          <li>Справа вверху <b>«Развернуть» (Deploy) → «Новое развертывание»</b>. Значок шестерёнки → <b>«Веб-приложение»</b>.
+            «Запуск от имени» — <b>Я</b>, «У кого есть доступ» — <b>Все</b>. Нажмите «Развернуть».</li>
+          <li>Google попросит разрешение: «Предоставить доступ» → ваш аккаунт → <b>«Дополнительно» → «Перейти на страницу…»</b> → «Разрешить».
+            Предупреждение «приложение не проверено» — нормально: это ваш собственный скрипт.</li>
+          <li>Скопируйте <b>«URL веб-приложения»</b> (заканчивается на <code>/exec</code>) и вставьте его выше. Нажмите «Подключить».</li>
+          <li>Чтобы остальные устройства подключались сами, этот адрес вписывают в код приложения — в <code>BUILTIN_SHEET</code>.</li>
+        </ol>
+        <p class="sub">Листы «Каталог», «Сделки», «Возвраты», «История» обновляются сами при каждом сохранении — смотрите, фильтруйте и печатайте их,
+          но правьте данные только здесь: ручные правки в листах будут перезаписаны. Скрытый лист «_data» не трогайте.</p>
+      </details>
+    </div>
+    <div class="mfoot">
+      <button class="btn danger" id="s_off" style="margin-right:auto" onclick="disconnectSync()">Отключить</button>
+      <button class="btn" id="s_now" onclick="syncNow()">Обновить сейчас</button>
+      <button class="btn primary" id="s_ok" onclick="connectSync()">Подключить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ МОДАЛКА: ИСТОРИЯ ============ -->
+<div class="overlay" id="ovHist">
+  <div class="modal" style="max-width:600px">
+    <div class="mhead"><h3 id="histTitle">История</h3>
+      <button class="btn ghost" style="margin-left:auto" onclick="closeModal('ovHist')">✕</button></div>
+    <div class="mbody">
+      <div class="sub" id="histState" style="margin-bottom:16px;font-size:13px"></div>
+      <ul class="tl" id="histList"></ul>
+      <div class="hint" id="histLegacy" style="font-size:12px;color:var(--muted);margin-top:4px">«Восстановлено» — эта сделка заведена до появления истории, поэтому её прошлые изменения не записывались. Здесь собрано то, что известно: выдача, возвраты и закрытие. Все новые изменения записываются полностью.</div>
+    </div>
+    <div class="mfoot"><button class="btn" onclick="closeModal('ovHist')">Закрыть</button></div>
+  </div>
+</div>
+
 <!-- ============ МОДАЛКА: ВОЗВРАТ ============ -->
 <div class="overlay" id="ovReturn">
   <div class="modal" style="max-width:600px">
@@ -545,11 +650,12 @@ function load(){
     const raw = localStorage.getItem(KEY);
     if(raw){ const p = JSON.parse(raw); state.items = p.items||[]; state.rentals = p.rentals||[]; }
   }catch(e){ console.warn('Не удалось прочитать данные', e); }
-  migrate();
+  if(migrate()) save();
 }
 
 /* Сделки, закрытые до появления частичных возвратов, превращаем в один полный возврат */
 function migrate(){
+  let changed = false;
   for(const r of state.rentals){
     if(!Array.isArray(r.returns)) r.returns = [];
     if(r.status === 'closed' && !r.returns.length){
@@ -557,12 +663,15 @@ function migrate(){
                       items:r.lines.map(l=>({itemId:l.itemId, qty:l.qty}))});
     }
     syncStatus(r);
+    if(!Array.isArray(r.log)){ rebuildLog(r); changed = true; }
   }
+  return changed;
 }
 function save(){
   try{ localStorage.setItem(KEY, JSON.stringify(state)); }
   catch(e){ alert('Не удалось сохранить данные: '+e.message); }
   if(typeof checkBackup === 'function') checkBackup();
+  if(typeof onLocalChange === 'function') onLocalChange();
 }
 const uid = () => Math.random().toString(36).slice(2,10);
 
@@ -654,6 +763,72 @@ function rentalTotal(r){
 const contractTotal = r => r.lines.reduce((s,l)=> s + l.qty * l.price * r.days, 0);
 const rentalDebt    = r => Math.max(0, rentalTotal(r) - (r.paid||0));
 const rentalOverpay = r => Math.max(0, (r.paid||0) - rentalTotal(r));
+
+/* ---------- история сделки ----------
+   r.log = [{at, type, title, details:[строки], legacy?}] — что и когда происходило.
+   Тексты сохраняются как были на момент события, поэтому переименование позиции
+   в каталоге историю не меняет. */
+const nowISO = () => new Date().toISOString();
+function logEvent(r, type, title, details=[]){
+  const e = {at:nowISO(), type, title, details};
+  if(sync && sync.name) e.by = sync.name;   // кто сделал — когда работают несколько человек
+  (r.log || (r.log = [])).push(e);
+}
+const unitTxt = id => unitOf(itemById(id));
+const lineTxt = l => `${itemLabel(itemById(l.itemId))} — ${l.qty} ${unitTxt(l.itemId)} по ${nf2.format(l.price)} с./дн`;
+const itemsTxt = items => items.map(i=>`${itemLabel(itemById(i.itemId))} — ${i.qty} ${unitTxt(i.itemId)}`);
+
+function createDetails(r){
+  const d = r.lines.map(lineTxt);
+  d.push(`Срок: ${r.days} ${plural(r.days,'день','дня','дней')}, с ${fmtD(r.start)} по ${fmtD(addDays(r.start,r.days))}`);
+  d.push(`Сумма по договору: ${money(contractTotal(r))}`);
+  if(r.deposit) d.push(`Залог: ${money(r.deposit)}`);
+  if(r.paid)    d.push(`Оплачено: ${money(r.paid)}`);
+  return d;
+}
+
+function closeDetails(r){
+  const total = rentalTotal(r), d = [`Сумма аренды: ${money(total)}`, `Оплачено: ${money(r.paid||0)}`];
+  if(rentalDebt(r) > 0)    d.push(`Долг: ${money(rentalDebt(r))}`);
+  if(rentalOverpay(r) > 0) d.push(`Переплата — вернуть клиенту: ${money(rentalOverpay(r))}`);
+  if(r.deposit)            d.push(`Залог к возврату: ${money(r.deposit)}`);
+  return d;
+}
+
+/* что поменялось при редактировании: «было → стало» по каждому полю */
+function diffRental(a, b){
+  const d = [], q = s => s ? `«${s}»` : '—';
+  if(a.client !== b.client)           d.push(`Клиент: ${q(a.client)} → ${q(b.client)}`);
+  if((a.phone||'') !== (b.phone||'')) d.push(`Телефон: ${a.phone||'—'} → ${b.phone||'—'}`);
+  if(a.start !== b.start)             d.push(`Дата выдачи: ${fmtD(a.start)} → ${fmtD(b.start)}`);
+  if(a.days !== b.days)               d.push(`Срок: ${a.days} → ${b.days} ${plural(b.days,'день','дня','дней')} (вернуть до ${fmtD(addDays(b.start,b.days))})`);
+  const am = new Map(a.lines.map(l=>[l.itemId,l])), bm = new Map(b.lines.map(l=>[l.itemId,l]));
+  for(const [id,l] of bm){
+    const o = am.get(id);
+    if(!o) d.push(`Добавлено: ${lineTxt(l)}`);
+    else if(o.qty !== l.qty) d.push(`${itemLabel(itemById(id))}: ${o.qty} → ${l.qty} ${unitTxt(id)}`);
+  }
+  for(const [id,l] of am) if(!bm.has(id)) d.push(`Убрано: ${lineTxt(l)}`);
+  if((a.deposit||0) !== (b.deposit||0)) d.push(`Залог: ${money(a.deposit)} → ${money(b.deposit)}`);
+  if((a.paid||0) !== (b.paid||0))       d.push(`Оплачено: ${money(a.paid)} → ${money(b.paid)}`);
+  if((a.note||'') !== (b.note||''))     d.push(`Комментарий: ${q(a.note)} → ${q(b.note)}`);
+  const ta = rentalTotal(a), tb = rentalTotal(b);
+  if(Math.round(ta) !== Math.round(tb)) d.push(`Сумма аренды: ${money(ta)} → ${money(tb)}`);
+  return d;
+}
+
+/* сделки, заведённые до появления истории: восстанавливаем то, что известно */
+function rebuildLog(r){
+  const created = !isNaN(Date.parse(r.createdAt)) && String(r.createdAt).length > 10 ? r.createdAt : r.start+'T09:00:00';
+  r.log = [{at:created, type:'create', title:'Сдано в аренду', details:createDetails(r), legacy:true}];
+  const rets = returnsOf(r).slice().sort((x,y)=>x.date.localeCompare(y.date));
+  for(const x of rets){
+    const n = x.items.reduce((s,i)=>s+i.qty,0);
+    r.log.push({at:x.date+'T12:00:00', type:'return', title:`Возврат: ${n} ед.`, details:itemsTxt(x.items), legacy:true});
+  }
+  if(r.status === 'closed' && r.closedAt)
+    r.log.push({at:r.closedAt+'T12:00:01', type:'close', title:'Сделка закрыта', details:closeDetails(r), legacy:true});
+}
 
 /* статус сделки: closed | overdue | soon | open */
 function rentalState(r){
@@ -781,23 +956,16 @@ function renderRentals(){
       return `<li>${itemLabelHtml(it)} — ${qty} · ${nf2.format(l.price)} с./дн</li>`;
     }).join('');
 
-    const rets = returnsOf(r).slice().sort((a,b)=>a.date.localeCompare(b.date));
-    const retsHtml = (rets.length && !(r.status==='closed' && rets.length===1))
-      ? `<div class="rets">${rets.map(x=>{
-          const n = x.items.reduce((s,i)=>s+i.qty,0);
-          return `<span>↩ ${fmtD(x.date)} — ${n} шт</span>`;
-        }).join('')}</div>` : '';
-
     const contract = contractTotal(r), overpay = rentalOverpay(r);
 
     const phone = (r.phone||'').trim();
     const tel = phone ? `<a href="tel:${esc(phone.replace(/[^\d+]/g,''))}" class="sub" style="color:var(--brand)">${esc(phone)}</a>` : '<span class="sub">—</span>';
 
     return `<tr>
-      <td class="c-main"><div class="strong">${esc(r.client)}</div>
+      <td class="c-main"><div class="cl-head"><div class="strong">${esc(r.client)}</div><button class="hist-btn" onclick="openHistory('${r.id}')" title="История сделки" aria-label="История сделки"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg></button></div>
           <div>${tel}</div>
           ${r.note?`<div class="sub">${esc(r.note)}</div>`:''}</td>
-      <td class="c-block" data-label="Позиции"><ul class="lines sub">${lines}</ul>${retsHtml}</td>
+      <td class="c-block" data-label="Позиции"><ul class="lines sub">${lines}</ul></td>
       <td class="nowrap" data-label="Взяли">${fmtD(r.start)}<div class="sub">${r.days} ${plural(r.days,'день','дня','дней')}</div></td>
       <td class="nowrap" data-label="Вернуть">${fmtD(addDays(r.start,r.days))}</td>
       <td data-label="Осталось">${leftCell}</td>
@@ -1128,13 +1296,25 @@ function saveRental(){
   const finalLines = [...merged.values()];
 
   if(existing){
+    const before = JSON.parse(JSON.stringify(existing));
     Object.assign(existing, {client, phone, start, days, deposit, paid, note, lines:finalLines});
     syncStatus(existing);
+    const d = diffRental(before, existing);
+    if(d.length){
+      const onlyPay = d.length === 1 && d[0].startsWith('Оплачено:');
+      logEvent(existing, onlyPay ? 'pay' : 'edit', onlyPay ? 'Оплата' : 'Изменена сделка', d);
+    }
+    if(before.status !== existing.status)
+      existing.status === 'closed'
+        ? logEvent(existing, 'close', 'Сделка закрыта', closeDetails(existing))
+        : logEvent(existing, 'reopen', 'Сделка снова активна', [`На руках: ${outTotal(existing)} ед.`]);
   }else{
-    state.rentals.push({
-      id:uid(), client, phone, start, days, deposit, paid, note, lines:finalLines, returns:[],
+    const r = {
+      id:uid(), client, phone, start, days, deposit, paid, note, lines:finalLines, returns:[], log:[],
       status:'open', closedAt:null, createdAt:new Date().toISOString()
-    });
+    };
+    logEvent(r, 'create', 'Сдано в аренду', createDetails(r));
+    state.rentals.push(r);
   }
   save(); render(); closeModal('ovRent');
 }
@@ -1177,9 +1357,50 @@ function deleteReturn(retId){
   }
   const n = ret.items.reduce((s,i)=>s+i.qty,0);
   if(!confirm(`Удалить возврат от ${fmtD(ret.date)}?\n${n} шт снова будут числиться на руках у «${r.client}».`)) return;
+  const wasClosed = r.status === 'closed', sumBefore = rentalTotal(r);
   r.returns = returnsOf(r).filter(x=>x.id!==retId);
   syncStatus(r);
+  const d = itemsTxt(ret.items), sumAfter = rentalTotal(r);
+  if(Math.round(sumBefore) !== Math.round(sumAfter)) d.push(`Сумма аренды: ${money(sumBefore)} → ${money(sumAfter)}`);
+  logEvent(r, 'undo', `Отменён возврат от ${fmtD(ret.date)}`, d);
+  if(wasClosed && r.status === 'open') logEvent(r, 'reopen', 'Сделка снова активна', [`На руках: ${outTotal(r)} ед.`]);
   save(); render(); renderRetLog(); rentCalc();
+}
+
+/* ---------- окно истории ---------- */
+const HIST_TITLE = {create:'выдача', edit:'изменение', pay:'оплата', return:'возврат', undo:'отмена', close:'закрытие', reopen:'открыта'};
+
+function fmtDT(iso, legacy){
+  const d = new Date(iso);
+  if(isNaN(d)) return '—';
+  return legacy
+    ? d.toLocaleDateString('ru-RU')
+    : d.toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+}
+/* размеры в тексте истории тоже выделяем: «0,5×2 м», «3,4 м» (но не «м²») */
+const boldSizes = html => html.replace(/(\d+(?:,\d+)?(?:×\d+(?:,\d+)?)? м)(?![²\wа-я])/g, '<span class="sz">$1</span>');
+
+function openHistory(id){
+  const r = state.rentals.find(x=>x.id===id);
+  if(!r) return;
+  if(!Array.isArray(r.log)) rebuildLog(r);
+  document.getElementById('histTitle').textContent = `История — ${r.client}`;
+  document.getElementById('histState').innerHTML = r.status === 'open'
+    ? `<span class="badge b-ok">активна</span> на руках ${outTotal(r)} из ${pcsTotal(r)} ед. · сумма ${money(rentalTotal(r))}`
+    : `<span class="badge b-mut">закрыта ${fmtD(r.closedAt)}</span> сумма ${money(rentalTotal(r))}`;
+
+  const ev = r.log.slice().sort((a,b)=>a.at.localeCompare(b.at));
+  document.getElementById('histList').innerHTML = ev.map(e=>`
+    <li class="h-${e.type}">
+      <span class="dot"></span>
+      <div class="when">${fmtDT(e.at, e.legacy)}${e.by ? ' · ' + esc(e.by) : ''}${e.legacy ? ' · <i>восстановлено</i>' : ''}</div>
+      <div class="what">${esc(e.title)}</div>
+      ${e.details && e.details.length ? `<ul class="det">${e.details.map(x=>`<li>${boldSizes(esc(x))}</li>`).join('')}</ul>` : ''}
+    </li>`).join('');
+  document.getElementById('histLegacy').style.display = ev.some(e=>e.legacy) ? '' : 'none';
+
+  document.getElementById('ovHist').classList.add('open');
+  lockScroll(true);
 }
 
 /* ---------- форма возврата ---------- */
@@ -1295,8 +1516,15 @@ function saveReturn(){
   if(date > todayISO()) return err('Дата возврата не может быть в будущем.');
   const items = retItems();
   if(!items.length) return err('Укажите, сколько привезли.');
+  const sumBefore = rentalTotal(r);
   returnsOf(r).push({id:uid(), date, items});
   syncStatus(r);
+  const n = items.reduce((s,i)=>s+i.qty,0), sumAfter = rentalTotal(r);
+  const d = [...itemsTxt(items), `Дата возврата: ${fmtD(date)}`];
+  if(r.status === 'open') d.push(`На руках осталось: ${outTotal(r)} ед.`);
+  if(Math.round(sumBefore) !== Math.round(sumAfter)) d.push(`Сумма аренды: ${money(sumBefore)} → ${money(sumAfter)}`);
+  logEvent(r, 'return', `Возврат: ${n} ед.`, d);
+  if(r.status === 'closed') logEvent(r, 'close', 'Сделка закрыта', closeDetails(r));
   save(); render(); closeModal('ovReturn');
 }
 
@@ -1315,6 +1543,7 @@ function exportData(){
 /* Данные лежат только в этом браузере — напоминаем сохранять копию */
 function checkBackup(){
   const n = document.getElementById('noteBackup');
+  // напоминаем и с таблицей: её адрес публичный, стереть данные в ней может кто угодно
   if(!state.items.length && !state.rentals.length){ n.classList.remove('show'); return; }
   let last = null;
   try{ last = localStorage.getItem(KEY+'.lastExport'); }catch(e){}
@@ -1334,7 +1563,7 @@ function importData(input){
     try{
       const p = JSON.parse(rd.result);
       if(!Array.isArray(p.items) || !Array.isArray(p.rentals)) throw new Error('неверная структура файла');
-      if(!confirm('Импорт заменит все текущие данные. Продолжить?')) return;
+      if(!confirm(sync ? 'Импорт заменит все текущие данные — и здесь, и в Google Таблице, у всех. Продолжить?' : 'Импорт заменит все текущие данные. Продолжить?')) return;
       state = {items:p.items, rentals:p.rentals};
       migrate();
       save(); render();
@@ -1391,6 +1620,7 @@ function applyCatalogUpdate(){
   let v = null;
   try{ v = localStorage.getItem(KEY+'.catalog'); }catch(e){}
   if(v === CATALOG_VERSION) return;
+  if(sync){ try{ localStorage.setItem(KEY+'.catalog', CATALOG_VERSION); }catch(e){} return; }   // каталог общий — в таблице
   state.items = defaultItems();
   save();
   try{ localStorage.setItem(KEY+'.catalog', CATALOG_VERSION); }catch(e){}
@@ -1402,6 +1632,397 @@ function loadDefaultCatalog(){
   state.items = defaultItems();
   save(); render();
 }
+
+/* ===================== Google Таблица ===================== */
+/* Таблица — общая база для всех устройств, а здесь хранится её копия. Приложение
+   работает с копией сразу, изменения уходят в таблицу в фоне, чужие подтягиваются
+   при открытии, при возвращении в приложение и раз в 30 секунд.
+   Если таблицу успели изменить с другого устройства, сервер отвечает «конфликт»
+   и присылает свежие данные; тогда правки сливаются по сделкам, позициям и
+   отдельным полям (mergeRemote) и отправка повторяется.
+   Пароля нет: доступ к таблице даёт сам адрес. */
+/* Подключение к таблице, вшитое в код: с заполненным url все устройства подключаются сами.
+   ВНИМАНИЕ: сайт публичный — адрес видит любой, кто откроет код страницы, и может
+   прочитать или изменить данные в таблице. */
+const BUILTIN_SHEET = { url: 'https://script.google.com/macros/s/AKfycbyPpC8OZwomUfi89sH09A5n71M-XPOMD8213WoFyyqbq7NZ3wHUkLNBxFPkdrAnB3xu/exec' };
+
+const SYNC_KEY = KEY + '.sync';   // {url, name, version, dirty}
+const BASE_KEY = KEY + '.base';   // данные таблицы на момент последней синхронизации — для слияния
+let sync = readJSON(SYNC_KEY);
+let syncBusy = false, syncAgain = false, syncTimer = null, changeSeq = 0;
+let syncState = sync ? 'idle' : 'off', syncMsg = '', syncAt = null;
+
+function readJSON(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } }
+function writeJSON(k, v){
+  try{ v == null ? localStorage.removeItem(k) : localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v)); }
+  catch(e){ console.warn('localStorage:', e); }
+}
+const storeSync = () => writeJSON(SYNC_KEY, sync);
+
+const SYNC_ERR = {
+  busy: 'Таблица занята, повторю позже.',
+  'bad-request': 'Таблица не поняла запрос.',
+  'bad-action': 'В таблице старая версия скрипта — обновите её (см. README).',
+  'bad-state': 'Таблица отклонила данные.'
+};
+function syncFail(code){
+  const e = new Error(SYNC_ERR[code] || ('Ошибка таблицы: ' + code));
+  e.kind = code === 'busy' ? 'offline' : 'error';
+  return e;
+}
+
+/* text/plain — «простой» запрос: браузер не шлёт предварительный OPTIONS, которого Apps Script не понимает */
+async function syncCall(cfg, body){
+  let res;
+  try{
+    res = await fetch(cfg.url, {method:'POST', redirect:'follow', cache:'no-store',
+      headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body)});
+  }catch(e){
+    const err = new Error('Нет связи с таблицей.'); err.kind = 'offline'; throw err;
+  }
+  try{ return await res.json(); }
+  catch(e){ const err = new Error('Таблица ответила не данными. Проверьте адрес и доступ «Все».'); err.kind = 'error'; throw err; }
+}
+
+/* вызывается из save(): любое изменение здесь — отправить в таблицу */
+function onLocalChange(){
+  if(!sync) return;
+  changeSeq++;
+  sync.dirty = true; storeSync();
+  schedulePush(); renderSyncChip();
+}
+function schedulePush(){ clearTimeout(syncTimer); syncTimer = setTimeout(push, 600); }
+
+async function push(){
+  if(!sync) return;
+  if(syncBusy){ syncAgain = true; return; }
+  clearTimeout(syncTimer);
+  syncBusy = true; setSync('saving');
+  try{
+    for(let attempt = 0; attempt < 4; attempt++){
+      const seq = changeSeq, sent = JSON.stringify(state);
+      const r = await syncCall(sync, {action:'save', baseVersion:sync.version, by:sync.name || '',
+                                      state:JSON.parse(sent), report:buildReport()});
+      if(!sync) return;   // отключили, пока ждали ответ
+      if(r.ok){
+        sync.version = r.version;
+        if(changeSeq === seq) sync.dirty = false;   // пока ждали, ничего не поменяли
+        storeSync(); writeJSON(BASE_KEY, sent);
+        setSync('ok', r.reportError ? 'Данные сохранены, но листы для просмотра не обновились: ' + r.reportError : '');
+        return;
+      }
+      if(r.error === 'conflict'){ mergeRemote(r.state || {items:[], rentals:[]}, r.version); continue; }
+      throw syncFail(r.error);
+    }
+    throw syncFail('busy');
+  }catch(e){ setSync(e.kind || 'error', e.message); }
+  finally{
+    syncBusy = false;
+    if(syncAgain){ syncAgain = false; schedulePush(); }
+  }
+}
+
+async function pull(){
+  if(!sync || syncBusy) return;
+  if(sync.dirty) return push();
+  syncBusy = true;
+  const seq = changeSeq;
+  try{
+    const r = await syncCall(sync, {action:'get', since:sync.version});
+    if(!sync) return;
+    if(!r.ok) throw syncFail(r.error);
+    if(!r.unchanged){
+      if(changeSeq === seq && !sync.dirty) applyRemote(r.state || {items:[], rentals:[]}, r.version);
+      else syncAgain = true;   // пока ждали, здесь что-то изменили — отправка сольёт
+    }
+    setSync('ok');
+  }catch(e){ setSync(e.kind || 'error', e.message); }
+  finally{
+    syncBusy = false;
+    if(syncAgain){ syncAgain = false; schedulePush(); }
+  }
+}
+
+/* данные из таблицы заменяют копию на устройстве */
+function applyRemote(remote, version){
+  state = {items: Array.isArray(remote.items) ? remote.items : [], rentals: Array.isArray(remote.rentals) ? remote.rentals : []};
+  migrate();
+  writeJSON(KEY, state);
+  writeJSON(BASE_KEY, remote);
+  sync.version = version; sync.dirty = false; storeSync();
+  render(); checkBackup();
+}
+
+/* ---------- слияние ----------
+   base — как было в таблице при прошлой синхронизации, local — здесь, remote — в таблице сейчас.
+   Поменяли только с одной стороны — берём эту сторону; с обеих — сливаем по полям. */
+const jsonOf = x => x === undefined ? '' : JSON.stringify(x);
+
+function mergeById(base, local, remote, both){
+  const B = new Map((base || []).map(x=>[x.id, x]));
+  const L = new Map((local || []).map(x=>[x.id, x]));
+  const R = new Map((remote || []).map(x=>[x.id, x]));
+  const order = [...R.keys(), ...[...L.keys()].filter(id=>!R.has(id))];
+  const out = [];
+  for(const id of order){
+    const b = B.get(id), l = L.get(id), r = R.get(id);
+    const lc = jsonOf(l) !== jsonOf(b), rc = jsonOf(r) !== jsonOf(b);
+    const v = !lc ? r : !rc ? l : jsonOf(l) === jsonOf(r) ? l : both(l, r, b);
+    if(v) out.push(v);
+  }
+  return out;
+}
+
+/* поле изменили только здесь — берём наше, только там — их, по-разному с обеих сторон — наше и отмечаем */
+function mergeFields(l, r, b, skip){
+  const m = JSON.parse(JSON.stringify(l));
+  let clash = false;
+  for(const f of new Set([...Object.keys(l), ...Object.keys(r)])){
+    if(skip && skip.includes(f)) continue;
+    const lv = jsonOf(l[f]), rv = jsonOf(r[f]), bv = jsonOf(b ? b[f] : undefined);
+    if(lv === bv){ if(r[f] === undefined) delete m[f]; else m[f] = JSON.parse(rv); }
+    else if(rv !== bv && rv !== lv) clash = true;
+  }
+  return {m, clash};
+}
+
+function mergeRemote(remote, version){
+  const base = readJSON(BASE_KEY) || {items:[], rentals:[]};
+  const warn = [];
+  const items = mergeById(base.items, state.items, remote.items, (l, r, b)=>{
+    if(!l || !r){ warn.push(`Позицию «${itemLabel(l || r)}» удалили на одном устройстве и изменили на другом — она оставлена.`); return l || r; }
+    const {m, clash} = mergeFields(l, r, b);
+    if(clash) warn.push(`Позицию «${itemLabel(m)}» одновременно изменили на двух устройствах — оставлены изменения с этого.`);
+    return m;
+  });
+  const rentals = mergeById(base.rentals, state.rentals, remote.rentals, (l, r, b)=>{
+    if(!l || !r){ warn.push(`Сделку «${(l || r).client}» удалили на одном устройстве и изменили на другом — она оставлена.`); return l || r; }
+    const {m, clash} = mergeFields(l, r, b, ['returns', 'log', 'status', 'closedAt']);
+    m.returns = mergeById(b && b.returns, l.returns, r.returns, (x, y)=>x || y);
+    const seen = new Set();
+    m.log = [...(l.log || []), ...(r.log || [])].filter(e=>{
+      const k = e.at + '|' + e.type + '|' + e.title;
+      if(seen.has(k)) return false; seen.add(k); return true;
+    }).sort((x, y)=>x.at.localeCompare(y.at));
+    syncStatus(m);
+    if(clash) warn.push(`Сделку «${m.client}» одновременно изменили на двух устройствах — где поля разошлись, оставлены изменения с этого. Проверьте её историю.`);
+    return m;
+  });
+  state = {items, rentals};
+  migrate();
+  for(const it of state.items){
+    const free = freeQty(it.id);
+    if(free < 0) warn.push(`«${itemLabel(it)}»: по сделкам выдано на ${-free} ${unitOf(it)} больше, чем есть на складе — двое выдали одно и то же. Проверьте сделки.`);
+  }
+  writeJSON(KEY, state);
+  writeJSON(BASE_KEY, remote);
+  sync.version = version; storeSync();   // dirty остаётся: слитое ещё надо отправить
+  render();
+  if(warn.length) showSyncNote(warn);
+}
+
+function showSyncNote(lines){
+  document.getElementById('noteSyncText').innerHTML = lines.map(esc).join('<br>');
+  document.getElementById('noteSync').classList.add('show');
+}
+
+/* ---------- листы для просмотра в таблице ---------- */
+function buildReport(){
+  const dt = s => { const d = new Date(s); return isNaN(d) ? '' :
+    iso(d) + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); };
+  const r2 = n => Math.round(n * 100) / 100;
+  const ST = {open:'активна', soon:'истекает', overdue:'просрочена', closed:'закрыта'};
+
+  const cat = [['Название','Размер','Площадь, м²','Ед.','Всего','В аренде','Свободно','Цена, с./день','Примечание']];
+  for(const it of state.items){
+    const out = rentedQty(it.id);
+    cat.push([it.name, sizeStr(it), itemArea(it) ? r2(itemArea(it)) : '', unitOf(it), it.qty, out, it.qty - out, it.price, it.note || '']);
+  }
+
+  const rs = state.rentals.slice().sort((a, b)=> (a.status === b.status ? 0 : a.status === 'open' ? -1 : 1) || b.start.localeCompare(a.start));
+  const deals = [['Клиент','Телефон','Статус','Взяли','Срок, дн.','Вернуть до','Закрыта','Позиции','Всего ед.','На руках',
+                  'По договору, с.','Сумма, с.','Оплачено, с.','Долг, с.','Переплата, с.','Залог, с.','Комментарий']];
+  const rets = [['Дата','Клиент','Телефон','Позиция','Кол-во','Ед.']];
+  const hist = [['Время','Клиент','Событие','Подробности','Кто']];
+  for(const r of rs){
+    const pos = r.lines.map(l=>{
+      const it = itemById(l.itemId), out = outQty(r, l);
+      return `${itemLabel(it)} — ${l.qty} ${unitOf(it)}` + (r.status === 'open' && out < l.qty ? ` (на руках ${out})` : '');
+    }).join('\n');
+    deals.push([r.client, r.phone || '', ST[rentalState(r)], r.start, r.days, addDays(r.start, r.days), r.closedAt || '', pos,
+                pcsTotal(r), outTotal(r), r2(contractTotal(r)), r2(rentalTotal(r)), r.paid || 0, r2(rentalDebt(r)),
+                r2(rentalOverpay(r)), r.deposit || 0, r.note || '']);
+    for(const x of returnsOf(r)) for(const i of x.items){
+      const it = itemById(i.itemId);
+      rets.push([x.date, r.client, r.phone || '', itemLabel(it), i.qty, unitOf(it)]);
+    }
+    for(const e of r.log || []) hist.push([dt(e.at), r.client, e.title, (e.details || []).join('\n'), e.by || (e.legacy ? 'восстановлено' : '')]);
+  }
+  rets.splice(1, rets.length, ...rets.slice(1).sort((a, b)=>b[0].localeCompare(a[0])));
+  hist.splice(1, hist.length, ...hist.slice(1).sort((a, b)=>b[0].localeCompare(a[0])));
+  return {'Каталог':cat, 'Сделки':deals, 'Возвраты':rets, 'История':hist};
+}
+
+/* ---------- состояние на экране ---------- */
+function setSync(st, msg){
+  syncState = st; syncMsg = msg || '';
+  checkBackup();
+  if(st === 'ok') syncAt = new Date();
+  renderSyncChip();
+  if(document.getElementById('ovSync').classList.contains('open')) renderSyncState();
+}
+
+function renderSyncChip(){
+  const c = document.getElementById('syncChip');
+  if(!sync){ c.className = 'sync-chip'; return; }
+  const st = syncState === 'idle' ? (sync.dirty ? 'saving' : 'ok') : syncState;
+  const txt = {ok:'Таблица', saving:'Сохраняю…', offline:'Нет связи', error:'Ошибка'}[st] || 'Таблица';
+  c.className = 'sync-chip on s-' + st;
+  c.innerHTML = `<span class="d"></span>${txt}`;
+  c.title = syncMsg || (st === 'ok' && syncAt ? 'Синхронизировано в ' + syncAt.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'}) : '');
+}
+
+function renderSyncState(){
+  const el = document.getElementById('syncState');
+  const conn = !!sync;
+  document.getElementById('s_off').style.display = conn && !BUILTIN_SHEET.url ? '' : 'none';
+  document.getElementById('s_now').style.display = conn ? '' : 'none';
+  document.getElementById('s_ok').textContent = conn ? 'Сохранить' : 'Подключить';
+  if(!conn){
+    el.className = 'sync-state';
+    el.innerHTML = 'Не подключено. Данные хранятся только на этом устройстве.';
+    return;
+  }
+  const st = syncState === 'idle' ? (sync.dirty ? 'saving' : 'ok') : syncState;
+  const head = {ok:'Подключено', saving:'Сохраняю…', offline:'Нет связи с таблицей', error:'Ошибка'}[st] || 'Подключено';
+  const lines = [];
+  if(syncAt) lines.push('Последняя синхронизация: ' + syncAt.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'}));
+  if(sync.dirty) lines.push('Есть изменения, которые ещё не дошли до таблицы — отправятся, когда появится связь.');
+  if(syncMsg) lines.push(esc(syncMsg));
+  el.className = 'sync-state s-' + st;
+  el.innerHTML = `<b>${head}</b>${sync.name ? ' · ' + esc(sync.name) : ''}${lines.length ? '<br>' + lines.join('<br>') : ''}`;
+}
+
+/* ---------- окно настройки ---------- */
+function openSync(){
+  const builtin = !!BUILTIN_SHEET.url;
+  document.getElementById('s_url').closest('.field').style.display = builtin ? 'none' : '';
+  document.getElementById('howto').style.display = builtin ? 'none' : '';
+  document.getElementById('s_url').value = sync ? sync.url : '';
+  document.getElementById('s_name').value = sync ? (sync.name || '') : '';
+  document.getElementById('s_err').classList.remove('show');
+  document.getElementById('howto').open = !sync;
+  renderSyncState();
+  document.getElementById('ovSync').classList.add('open');
+  lockScroll(true);
+}
+
+/* Первое подключение устройства к таблице. true — подключились.
+   В таблице нет сделок — выгружаем туда данные отсюда (её каталог мог прийти с устройства,
+   где ещё ничего не сдавали); здесь сделок нет — берём из таблицы;
+   сделки есть и там, и тут — спрашиваем, что оставить. */
+async function firstConnect(cfg){
+  const r = await syncCall(cfg, {action:'get'});
+  if(!r.ok) throw syncFail(r.error);
+  const remote = r.state;
+  const rc = remote && remote.rentals ? remote.rentals.length : 0;
+  const ic = remote && remote.items ? remote.items.length : 0;
+  if(!remote || (!rc && (!ic || state.rentals.length))){
+    sync = Object.assign(cfg, {version:r.version, dirty:true});
+    storeSync(); writeJSON(BASE_KEY, remote || {items:[], rentals:[]});
+    push();
+  }else if(!state.rentals.length){
+    sync = cfg; applyRemote(remote, r.version); setSync('ok');
+  }else if(confirm(`В таблице уже есть данные: ${rc} ${plural(rc,'сделка','сделки','сделок')}, ${ic} ${plural(ic,'позиция','позиции','позиций')} каталога.\n\n`
+                 + `Загрузить их на это устройство? Сделки на этом устройстве (${state.rentals.length}) будут заменены — перед этим скачается их резервная копия.`)){
+    exportData();
+    sync = cfg; applyRemote(remote, r.version); setSync('ok');
+  }else if(confirm('Тогда заменить данные в таблице данными с этого устройства?\nВсё, что сейчас в таблице, будет перезаписано.')){
+    sync = Object.assign(cfg, {version:r.version, dirty:true});
+    storeSync(); writeJSON(BASE_KEY, JSON.stringify(state));
+    push();
+  }else return false;
+  renderSyncChip();
+  return true;
+}
+
+async function connectSync(){
+  const B = BUILTIN_SHEET.url ? BUILTIN_SHEET : null;
+  const url = B ? B.url : document.getElementById('s_url').value.trim();
+  const name = document.getElementById('s_name').value.trim();
+  const errEl = document.getElementById('s_err');
+  const err = msg => { errEl.textContent = msg; errEl.classList.add('show'); };
+  errEl.textContent = ''; errEl.classList.remove('show');
+
+  if(!/^https:\/\/script\.google\.com\/.+\/exec$/.test(url))
+    return err('Адрес должен начинаться с https://script.google.com/ и заканчиваться на /exec — это «URL веб-приложения» из окна развертывания.');
+
+  // тот же адрес — меняем только имя
+  if(sync && sync.url === url){
+    sync.name = name; storeSync(); closeModal('ovSync'); renderSyncChip(); return;
+  }
+
+  const btn = document.getElementById('s_ok');
+  btn.disabled = true; btn.textContent = 'Подключаю…';
+  try{ localStorage.removeItem(KEY + '.autoDeclined'); }catch(e){}
+  let ok = false;
+  try{ ok = await firstConnect({url, name, version:0, dirty:false}); }
+  catch(e){
+    return err(e.kind !== 'offline' ? e.message : navigator.onLine === false ? 'Нет интернета.'
+      : 'Таблица не ответила. Проверьте адрес и что при развертывании выбрано «У кого есть доступ: Все».');
+  }
+  finally{ btn.disabled = false; renderSyncState(); }
+  if(ok) closeModal('ovSync');
+}
+
+/* Адрес вшит в код — устройство подключается само, без полей.
+   Нет связи — повторим при следующей проверке (раз в 30 секунд и при возвращении в приложение).
+   Отказались в вопросе «что оставить» — больше не спрашиваем; подключиться можно в «Ещё» → «Google Таблица». */
+let autoBusy = false;
+async function autoConnect(){
+  const B = BUILTIN_SHEET;
+  if(!B.url || autoBusy) return;
+  if(sync && sync.url === B.url) return;
+  try{ if(localStorage.getItem(KEY + '.autoDeclined') === B.url) return; }catch(e){}
+  autoBusy = true;
+  const name = sync && sync.name || '';
+  if(sync){ sync = null; storeSync(); writeJSON(BASE_KEY, null); }   // было подключение к другой таблице
+  try{
+    const ok = await firstConnect({url:B.url, name, version:0, dirty:false});
+    if(!ok){ try{ localStorage.setItem(KEY + '.autoDeclined', B.url); }catch(e){} return; }
+    if(!sync.name){
+      const n = prompt('Как вас зовут? Имя будет видно в истории сделок — кто что сделал.\nМожно оставить пустым и указать потом: «Ещё» → «Google Таблица».', '');
+      if(n && n.trim()){ sync.name = n.trim(); storeSync(); }
+    }
+  }catch(e){ console.warn('Автоподключение к таблице:', e.message); }
+  finally{ autoBusy = false; }
+}
+const syncTick = () => { if(sync) pull(); else autoConnect(); };
+
+function disconnectSync(){
+  if(!confirm('Отключить Google Таблицу на этом устройстве?\nДанные останутся и здесь, и в таблице, но больше не будут синхронизироваться.')) return;
+  if(sync && sync.dirty && !confirm('Часть изменений с этого устройства ещё не дошла до таблицы и туда не попадёт. Всё равно отключить?')) return;
+  sync = null; storeSync(); writeJSON(BASE_KEY, null);
+  setSync('off'); renderSyncState();
+  closeModal('ovSync');
+}
+
+function syncNow(){ sync && (sync.dirty ? push() : pull()); }
+
+async function copyScript(){
+  const note = document.getElementById('s_copied');
+  try{
+    const code = await (await fetch('apps-script/Code.gs', {cache:'no-store'})).text();
+    await navigator.clipboard.writeText(code);
+    note.textContent = 'Скопировано — вставьте в редактор Apps Script.';
+  }catch(e){
+    note.innerHTML = 'Не получилось скопировать. Откройте <a href="apps-script/Code.gs" target="_blank">код скрипта</a> и скопируйте вручную.';
+  }
+}
+
+setInterval(()=>{ if(document.visibilityState === 'visible') syncTick(); }, 30000);
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'visible') syncTick(); });
+window.addEventListener('online', syncTick);
 
 /* ===================== установка на главный экран ===================== */
 /* Офлайн-режима нет: страница всегда грузится с GitHub Pages. Если на устройстве остался
@@ -1437,6 +2058,8 @@ applyCatalogUpdate();
 document.getElementById('r_start').value = todayISO();
 render();
 checkBackup();
+renderSyncChip();
+syncTick();
 </script>
 </body>
 </html>
