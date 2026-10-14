@@ -511,7 +511,7 @@
       <div class="grid g3" style="margin-top:12px">
         <div class="field"><label>Дата выдачи</label><input type="date" id="r_start" onchange="rentCalc()"></div>
         <div class="field"><label>Срок, дней</label><input type="number" inputmode="numeric" id="r_days" min="1" step="1" value="7" oninput="rentCalc()"></div>
-        <div class="field"><label>Дата возврата</label><input id="r_end" disabled></div>
+        <div class="field"><label>Дата возврата</label><input type="date" id="r_end" onchange="setEndDate()"></div>
       </div>
 
       <div class="sec">
@@ -1204,10 +1204,20 @@ function setLineQty(i, v){ draftLines[i].qty = Math.max(1, Math.round(num(v))); 
 function addLine(){ draftLines.push({itemId:'', qty:1, price:0}); renderLines(); }
 function removeLine(i){ draftLines.splice(i,1); if(!draftLines.length) draftLines.push({itemId:'',qty:1,price:0}); renderLines(); }
 
+/* выбрали дату окончания — пересчитываем срок; раньше следующего дня после выдачи нельзя */
+function setEndDate(){
+  const start = document.getElementById('r_start').value || todayISO();
+  const end = document.getElementById('r_end').value;
+  if(end) document.getElementById('r_days').value = Math.max(1, diffDays(start, end));
+  rentCalc();
+}
+
 function rentCalc(){
   const start = document.getElementById('r_start').value || todayISO();
   const days = Math.max(1, Math.round(num(document.getElementById('r_days').value)));
-  document.getElementById('r_end').value = fmtD(addDays(start, days));
+  const endEl = document.getElementById('r_end');
+  endEl.value = addDays(start, days);
+  endEl.min = addDays(start, 1);
 
   draftLines.forEach((l,i)=>updateLineAmt(i));
   const d = draftRental();
@@ -1418,7 +1428,7 @@ function openReturn(id){
   d.value = todayISO(); d.min = r.start; d.max = todayISO();
   document.getElementById('ret_err').classList.remove('show');
   retDraft = {};
-  for(const l of r.lines) if(outQty(r,l) > 0) retDraft[l.itemId] = outQty(r,l);   // по умолчанию — всё
+  for(const l of r.lines) if(outQty(r,l) > 0) retDraft[l.itemId] = 0;   // по умолчанию — ничего; «Всё» — вернуть всё
   renderRetRows();
   document.getElementById('ovReturn').classList.add('open');
   lockScroll(true);
