@@ -951,7 +951,7 @@ function renderRentals(){
     const lines = r.lines.map(l=>{
       const it = itemById(l.itemId), out = outQty(r, l), u = unitOf(it);
       const qty = (r.status==='open' && out < l.qty)
-        ? `на руках <b>${out}</b> из ${l.qty} ${u}`
+        ? `вернул <b>${l.qty - out}</b> из ${l.qty} ${u}`
         : `<b>${l.qty}</b> ${u}`;
       return `<li>${itemLabelHtml(it)} — ${qty} · ${nf2.format(l.price)} с./дн</li>`;
     }).join('');
