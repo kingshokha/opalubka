@@ -31,6 +31,7 @@
   header.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
   .logo{font-size:18px;font-weight:700;letter-spacing:-.2px;margin-right:auto}
   .logo small{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+  .lg-short{display:none}
   .tabs{display:flex;gap:4px;background:var(--panel);padding:4px;border-radius:var(--radius);
         border:1px solid var(--line)}
   .tabs button{border:0;background:transparent;padding:8px 14px;border-radius:7px;cursor:pointer;
@@ -112,6 +113,9 @@
   .field{display:flex;flex-direction:column;gap:4px}
   .field label{font-size:12px;font-weight:600;color:var(--muted)}
   .field .hint{font-size:11.5px;color:var(--muted)}
+  .dt{display:flex;gap:6px}
+  .dt input[type=date]{flex:1;min-width:0}
+  .dt input[type=time]{width:104px;flex:0 0 auto}
   .sec{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
   .sec h4{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
 
@@ -229,8 +233,14 @@
     header.top{position:sticky;top:0;z-index:30;margin:0;gap:8px;padding:10px 12px;
                background:var(--bg);border-bottom:1px solid var(--line);
                padding-top:calc(10px + env(safe-area-inset-top))}
-    .logo{font-size:16px;width:auto}
+    header.top{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center}
+    .logo{font-size:16px;width:auto;margin:0;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+    .tabs{grid-column:1/-1}
+    .sync-chip{padding:6px 9px}
+    .menu-pop{max-width:calc(100vw - 24px)}
     .logo small{display:none}
+    .lg-long{display:none}
+    .lg-short{display:inline}
     .tabs{order:3;width:100%;padding:3px}
     .tabs button{flex:1;padding:10px 8px;font-size:14px}
 
@@ -323,7 +333,7 @@
 <div class="wrap">
 
   <header class="top">
-    <div class="logo">Учёт аренды опалубки<small>склад, сделки и расчёт стоимости</small></div>
+    <div class="logo"><span class="lg-long">Учёт аренды опалубки</span><span class="lg-short">Опалубка</span><small>склад, сделки и расчёт стоимости</small></div>
     <nav class="tabs">
       <button id="tab-rent" class="active" onclick="switchTab('rent')">Аренды</button>
       <button id="tab-cat" onclick="switchTab('cat')">Каталог и склад</button>
@@ -509,7 +519,8 @@
         <div class="field"><label>Телефон</label><input type="tel" inputmode="tel" id="r_phone" placeholder="+992 …" autocomplete="tel"></div>
       </div>
       <div class="grid g3" style="margin-top:12px">
-        <div class="field"><label>Дата выдачи</label><input type="date" id="r_start" onchange="rentCalc()"></div>
+        <div class="field"><label>Дата и время выдачи</label>
+          <div class="dt"><input type="date" id="r_start" onchange="rentCalc()"><input type="time" id="r_time"></div></div>
         <div class="field"><label>Срок, дней</label><input type="number" inputmode="numeric" id="r_days" min="1" step="1" value="7" oninput="rentCalc()"></div>
         <div class="field"><label>Дата возврата</label><input type="date" id="r_end" onchange="setEndDate()"></div>
       </div>
@@ -683,6 +694,7 @@ const num = v => { const n = parseFloat(String(v).replace(',','.')); return isFi
 
 const isMobile = () => window.matchMedia('(max-width:760px)').matches;
 
+const nowHM = () => { const d = new Date(); return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); };
 function todayISO(){ const d=new Date(); return iso(d); }
 function iso(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function parseD(s){ if(!s) return null; const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
@@ -780,7 +792,7 @@ const itemsTxt = items => items.map(i=>`${itemLabel(itemById(i.itemId))} — ${i
 
 function createDetails(r){
   const d = r.lines.map(lineTxt);
-  d.push(`Срок: ${r.days} ${plural(r.days,'день','дня','дней')}, с ${fmtD(r.start)} по ${fmtD(addDays(r.start,r.days))}`);
+  d.push(`Срок: ${r.days} ${plural(r.days,'день','дня','дней')}, с ${fmtD(r.start)}${r.startTime ? ' ' + r.startTime : ''} по ${fmtD(addDays(r.start,r.days))}`);
   d.push(`Сумма по договору: ${money(contractTotal(r))}`);
   if(r.deposit) d.push(`Залог: ${money(r.deposit)}`);
   if(r.paid)    d.push(`Оплачено: ${money(r.paid)}`);
@@ -801,6 +813,7 @@ function diffRental(a, b){
   if(a.client !== b.client)           d.push(`Клиент: ${q(a.client)} → ${q(b.client)}`);
   if((a.phone||'') !== (b.phone||'')) d.push(`Телефон: ${a.phone||'—'} → ${b.phone||'—'}`);
   if(a.start !== b.start)             d.push(`Дата выдачи: ${fmtD(a.start)} → ${fmtD(b.start)}`);
+  if((a.startTime||'') !== (b.startTime||'')) d.push(`Время выдачи: ${a.startTime||'—'} → ${b.startTime||'—'}`);
   if(a.days !== b.days)               d.push(`Срок: ${a.days} → ${b.days} ${plural(b.days,'день','дня','дней')} (вернуть до ${fmtD(addDays(b.start,b.days))})`);
   const am = new Map(a.lines.map(l=>[l.itemId,l])), bm = new Map(b.lines.map(l=>[l.itemId,l]));
   for(const [id,l] of bm){
@@ -966,7 +979,7 @@ function renderRentals(){
           <div>${tel}</div>
           ${r.note?`<div class="sub">${esc(r.note)}</div>`:''}</td>
       <td class="c-block" data-label="Позиции"><ul class="lines sub">${lines}</ul></td>
-      <td class="nowrap" data-label="Взяли">${fmtD(r.start)}<div class="sub">${r.days} ${plural(r.days,'день','дня','дней')}</div></td>
+      <td class="nowrap" data-label="Взяли">${fmtD(r.start)}<div class="sub">${r.startTime ? esc(r.startTime) + ' · ' : ''}${r.days} ${plural(r.days,'день','дня','дней')}</div></td>
       <td class="nowrap" data-label="Вернуть">${fmtD(addDays(r.start,r.days))}</td>
       <td data-label="Осталось">${leftCell}</td>
       <td class="num" data-label="Сумма"><span class="strong">${money(total)}</span>
@@ -1125,6 +1138,7 @@ function openRental(id){
   document.getElementById('r_name').value  = r ? r.client : '';
   document.getElementById('r_phone').value = r ? (r.phone||'') : '';
   document.getElementById('r_start').value = r ? r.start : todayISO();
+  document.getElementById('r_time').value  = r ? (r.startTime || '') : nowHM();   // новая сделка — текущее время
   document.getElementById('r_days').value  = r ? r.days : 7;
   document.getElementById('r_dep').value   = r ? (r.deposit||0) : 0;
   document.getElementById('r_paid').value  = r ? (r.paid||0) : 0;
@@ -1260,6 +1274,7 @@ function saveRental(){
   const client = document.getElementById('r_name').value.trim();
   const phone = document.getElementById('r_phone').value.trim();
   const start = document.getElementById('r_start').value;
+  const startTime = document.getElementById('r_time').value;   // необязательно; на сумму не влияет
   const days = Math.round(num(document.getElementById('r_days').value));
   const deposit = num(document.getElementById('r_dep').value);
   const paid = num(document.getElementById('r_paid').value);
@@ -1307,7 +1322,7 @@ function saveRental(){
 
   if(existing){
     const before = JSON.parse(JSON.stringify(existing));
-    Object.assign(existing, {client, phone, start, days, deposit, paid, note, lines:finalLines});
+    Object.assign(existing, {client, phone, start, startTime, days, deposit, paid, note, lines:finalLines});
     syncStatus(existing);
     const d = diffRental(before, existing);
     if(d.length){
@@ -1320,7 +1335,7 @@ function saveRental(){
         : logEvent(existing, 'reopen', 'Сделка снова активна', [`На руках: ${outTotal(existing)} ед.`]);
   }else{
     const r = {
-      id:uid(), client, phone, start, days, deposit, paid, note, lines:finalLines, returns:[], log:[],
+      id:uid(), client, phone, start, startTime, days, deposit, paid, note, lines:finalLines, returns:[], log:[],
       status:'open', closedAt:null, createdAt:new Date().toISOString()
     };
     logEvent(r, 'create', 'Сдано в аренду', createDetails(r));
@@ -1850,7 +1865,7 @@ function buildReport(){
   }
 
   const rs = state.rentals.slice().sort((a, b)=> (a.status === b.status ? 0 : a.status === 'open' ? -1 : 1) || b.start.localeCompare(a.start));
-  const deals = [['Клиент','Телефон','Статус','Взяли','Срок, дн.','Вернуть до','Закрыта','Позиции','Всего ед.','На руках',
+  const deals = [['Клиент','Телефон','Статус','Взяли','Время выдачи','Срок, дн.','Вернуть до','Закрыта','Позиции','Всего ед.','На руках',
                   'По договору, с.','Сумма, с.','Оплачено, с.','Долг, с.','Переплата, с.','Залог, с.','Комментарий']];
   const rets = [['Дата','Клиент','Телефон','Позиция','Кол-во','Ед.']];
   const hist = [['Время','Клиент','Событие','Подробности','Кто']];
@@ -1859,7 +1874,7 @@ function buildReport(){
       const it = itemById(l.itemId), out = outQty(r, l);
       return `${itemLabel(it)} — ${l.qty} ${unitOf(it)}` + (r.status === 'open' && out < l.qty ? ` (на руках ${out})` : '');
     }).join('\n');
-    deals.push([r.client, r.phone || '', ST[rentalState(r)], r.start, r.days, addDays(r.start, r.days), r.closedAt || '', pos,
+    deals.push([r.client, r.phone || '', ST[rentalState(r)], r.start, r.startTime || '', r.days, addDays(r.start, r.days), r.closedAt || '', pos,
                 pcsTotal(r), outTotal(r), r2(contractTotal(r)), r2(rentalTotal(r)), r.paid || 0, r2(rentalDebt(r)),
                 r2(rentalOverpay(r)), r.deposit || 0, r.note || '']);
     for(const x of returnsOf(r)) for(const i of x.items){
